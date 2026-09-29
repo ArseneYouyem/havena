@@ -30,6 +30,9 @@ class ReferenceGeneratorService {
   Future<String> nextFinanceReference() =>
       _next('FIN', _db.financesDao.countAll);
 
+  Future<String> nextRapportReference() =>
+      _next('RAP', _db.rapportsDao.countAll);
+
   Future<String> _next(String prefix, Future<int> Function() countAll) async {
     final count = await countAll();
     final sequence = (count + 1).toString().padLeft(6, '0');

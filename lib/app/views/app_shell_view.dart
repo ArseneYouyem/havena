@@ -14,6 +14,7 @@ import 'package:havena/features/inspections/views/inspections_view.dart';
 import 'package:havena/features/interventions/views/interventions_view.dart';
 import 'package:havena/features/logements/views/logements_view.dart';
 import 'package:havena/features/prestataires/views/prestataires_view.dart';
+import 'package:havena/features/rapports/views/rapports_view.dart';
 import 'package:havena/shared/widgets/layout/desktop_shell.dart';
 
 class AppShellView extends GetView<NavigationController> {
@@ -67,7 +68,7 @@ class AppShellView extends GetView<NavigationController> {
       case AppRoutes.finances:
         return const FinancesContent();
       case AppRoutes.rapports:
-        return const _PlaceholderContent(title: 'Rapports');
+        return const RapportsContent();
       case AppRoutes.calendrier:
         return const _PlaceholderContent(title: 'Calendrier');
       case AppRoutes.accessManagement:

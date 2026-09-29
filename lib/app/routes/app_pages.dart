@@ -12,6 +12,7 @@ import 'package:havena/features/inspections/bindings/inspections_binding.dart';
 import 'package:havena/features/interventions/bindings/interventions_binding.dart';
 import 'package:havena/features/logements/bindings/logements_binding.dart';
 import 'package:havena/features/prestataires/bindings/prestataires_binding.dart';
+import 'package:havena/features/rapports/bindings/rapports_binding.dart';
 
 class AppPages {
   AppPages._();
@@ -35,6 +36,7 @@ class AppPages {
         InspectionsBinding(),
         InterventionsBinding(),
         FinancesBinding(),
+        RapportsBinding(),
       ],
     ),
   ];

@@ -55,6 +55,10 @@ Justification : HAVENA est un système fortement relationnel (clients → logeme
 
 Charte officielle HAVENA (cahier des charges, annexe « Éléments fournis par HAVENA ») : **Vert `#1E7A4B`**, **Orange `#E8792E`**, **Blanc**. Définie dans `lib/app/theme/app_colors.dart` (`AppColors.primary` = vert, `AppColors.secondary` = orange). Les alertes du tableau de bord (Rouge/Orange/Jaune/Vert, cahier des charges §5) sont dans `AppColors.alertRed/alertOrange/alertYellow/alertGreen`.
 
+## Export PDF
+
+`lib/core/pdf/rapport_pdf_generator.dart` est le pattern de référence pour tout futur document PDF (devis, facture, reçu, contrat — cahier des charges §17 « Modèles de documents »), avec `package:pdf` (widgets `pw.*`) + `package:printing` (`Printing.layoutPdf` pour l'aperçu/impression natif). **Piège connu** : la police de base (Helvetica) ne supporte QUE le Latin-1/WinAnsi — les caractères accentués français (é, à, ç...) s'affichent normalement, mais des symboles comme le tiret cadratin « — », « ✓ », « ✗ » ne s'affichent PAS (glyphe manquant, silencieux à l'analyse statique). Toujours tester la génération réelle (vérifier les logs `flutter test` pour "Unable to find a font to draw..."), pas seulement vérifier que les octets produits commencent par `%PDF-`. Préférer un tiret simple `-` et des libellés texte (`[Oui]`/`[Non]`) aux symboles Unicode.
+
 ## Authentification et rôles
 
 **Implémenté** (`lib/features/auth/`, `lib/features/access_management/`, `lib/core/auth/role_permissions.dart`).

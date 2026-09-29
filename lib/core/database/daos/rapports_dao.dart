@@ -15,6 +15,13 @@ class RapportsDao extends DatabaseAccessor<AppDatabase>
   Future<Rapport?> getById(int id) =>
       (select(rapports)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = rapports.id.count();
+    final query = selectOnly(rapports)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(RapportsCompanion companion) =>
       into(rapports).insert(companion);
 
