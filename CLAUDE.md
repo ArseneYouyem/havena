@@ -34,7 +34,7 @@ Le développement se fait **desktop d'abord** (Windows/macOS). L'UI desktop est 
 - Les controllers ne touchent jamais directement la base de données, Firestore ou l'API Drive : ils passent par des `services`/`repositories`.
 - Navigation **centralisée** via `app/routes/` (`AppRoutes`, `AppPages`). Sur desktop, un seul `AppShellView` (route unique, montée une fois) héberge en permanence `DesktopShell` (sidebar + topbar fixes) ; le changement d'onglet ne fait PAS un `Get.toNamed` (qui rejouerait toute la page avec une transition) mais met à jour `NavigationController.currentRoute` (Rx), écouté par un `Obx` qui ne change que le contenu central. Ne jamais recréer le shell à chaque navigation. `AppRoutes` reste la source de vérité des identifiants de section même si toutes ne sont pas des `GetPage` séparées.
 - Composants UI réutilisables dans `shared/widgets/` (pas de duplication de composants entre features).
-- Chaque entité métier possède une référence unique au format `HAV-XXX-000001` (voir cahier des charges).
+- Chaque entité métier possède une référence unique au format `HAV-XXX-000001` (voir cahier des charges), générée par `ReferenceGeneratorService` (`core/references/`) — jamais saisie manuellement dans un formulaire.
 - La gestion des conflits de synchronisation doit être prévue dès la conception des modèles (champs `updated_at`, `updated_by`, statut de sync).
 - Couleurs : utiliser exclusivement la charte définie dans `AppColors` (voir section « Charte graphique »), jamais de couleur en dur dans une vue.
 
@@ -64,6 +64,10 @@ Charte officielle HAVENA (cahier des charges, annexe « Éléments fournis par H
 - Seule la Fondatrice voit l'onglet « Gestion des accès » (`AccessManagementContent`) : rôles/permissions en lecture seule + liste des comptes + formulaire d'ajout d'administrateur. La création de compte passe par une instance Firebase secondaire (`FirebaseAuthService.createUserWithSecondaryApp`) pour ne jamais déconnecter la session de la Fondatrice.
 - `AuthRepository.login()` (Firebase Auth + fetch Firestore ponctuel) met le résultat en cache local via `AuthSessionCacheService` (GetStorage, clé `auth_session`). Au démarrage, `AuthRepository.tryResumeSession()` relit ce cache **sans appel réseau** (résolu de façon synchrone dans `main()`, avant même `GetMaterialApp`, pour choisir la route de départ : `AppRoutes.login` ou `AppRoutes.dashboard`). Le rôle n'est jamais re-fetché automatiquement : uniquement via `AuthRepository.refreshSessionFromRemote()`, à appeler lors d'une synchronisation explicite. Toujours utiliser des lectures Firestore ponctuelles (`.get()`), jamais `.snapshots()`.
 - Filtrage : `SidebarMenu` n'affiche que les sections accessibles au rôle courant (`SessionController.canAccess`) ; `AppShellView` a un garde-fou qui redirige vers la première route autorisée si `NavigationController.currentRoute` pointe vers une section non permise.
+
+## Modules métier — pattern de référence
+
+`lib/features/clients/` et `lib/features/logements/` sont le pattern canonique à reproduire pour chaque futur module métier (abonnements, inspections, interventions, prestataires, finances...) : `repository` (seul point d'accès au DAO Drift + au `ReferenceGeneratorService`), `controller` (état de liste via `StreamSubscription` sur `repository.watchAll()`, état de formulaire en champs `Rx`/`Rxn` séparés, `openCreateForm()`/`openEditForm()`/`submitForm()`), `binding` (enregistre repository puis controller en `lazyPut`), `view` exportant un widget `XxxContent` SANS `DesktopShell` (liste + recherche live + dialog de formulaire, à la manière de `access_management_view.dart`). Les vues `XxxContent` sont branchées dans `AppShellView._buildContent()` selon la route, jamais dans une `GetPage` séparée. Un module qui référence un autre (ex. Logements → Clients pour le dropdown) injecte le repository de l'autre feature dans son controller.
 
 ## Suivi d'avancement
 

@@ -14,6 +14,13 @@ class ClientsDao extends DatabaseAccessor<AppDatabase> with _$ClientsDaoMixin {
   Future<Client?> getById(int id) =>
       (select(clients)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = clients.id.count();
+    final query = selectOnly(clients)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(ClientsCompanion companion) =>
       into(clients).insert(companion);
 

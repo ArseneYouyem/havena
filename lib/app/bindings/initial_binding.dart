@@ -3,6 +3,7 @@ import 'package:havena/app/controllers/navigation_controller.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/core/auth/role_permissions.dart';
 import 'package:havena/core/database/app_database.dart';
+import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/core/storage/get_storage_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/auth/repositories/auth_repository.dart';
@@ -19,6 +20,10 @@ class InitialBinding extends Bindings {
     );
     Get.put<AppDatabase>(
       AppDatabase(),
+      permanent: true,
+    );
+    Get.put<ReferenceGeneratorService>(
+      ReferenceGeneratorService(Get.find<AppDatabase>()),
       permanent: true,
     );
     Get.put<NavigationController>(

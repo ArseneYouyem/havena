@@ -15,6 +15,13 @@ class LogementsDao extends DatabaseAccessor<AppDatabase>
   Future<Logement?> getById(int id) =>
       (select(logements)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = logements.id.count();
+    final query = selectOnly(logements)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(LogementsCompanion companion) =>
       into(logements).insert(companion);
 
