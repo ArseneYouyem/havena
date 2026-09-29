@@ -4,6 +4,7 @@ import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/auth/repositories/auth_repository.dart';
+import 'package:havena/shared/widgets/layout/reference_search_field.dart';
 import 'package:havena/shared/widgets/layout/sidebar_menu.dart';
 
 class DesktopShell extends StatelessWidget {
@@ -72,6 +73,8 @@ class _TopBar extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
+          const SizedBox(width: 32),
+          const ReferenceSearchField(),
           const Spacer(),
           const Text(
             '⚪ Non synchronisé',
