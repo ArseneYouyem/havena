@@ -22,7 +22,7 @@ Le développement se fait **desktop d'abord** (Windows/macOS). L'UI desktop est 
 - Flutter SDK `^3.10.8`
 - State management + navigation : **GetX** (`get`)
 - Stockage local léger (préférences, cache, objets simples) : **GetStorage**
-- Base de données locale principale (métier, relationnelle) : **Drift (SQLite)** — `drift`, `drift_flutter`, `sqlite3_flutter_libs` (deps), `drift_dev` + `build_runner` (dev deps).
+- Base de données locale principale (métier, relationnelle) : **Drift (SQLite)** — `drift`, `drift_flutter`, `path_provider` (deps), `drift_dev` + `build_runner` (dev deps). Depuis Drift 2.32+/sqlite3 3.x, SQLite est bundlé automatiquement sur toutes les plateformes natives (via native assets) : ne pas ajouter `sqlite3_flutter_libs`, il est obsolète (marqué `+eol`) et inutile.
 - Synchronisation distante : Google Drive, en opération explicite (pas de sync automatique silencieuse imposée)
 
 ## Règles d'architecture impératives
