@@ -9,8 +9,8 @@ import 'package:havena/core/storage/get_storage_service.dart';
 import 'package:havena/core/storage/photo_category.dart';
 import 'package:havena/core/sync/google_drive_auth_service.dart';
 import 'package:havena/core/sync/google_drive_sync_service.dart';
+import 'package:havena/core/sync/entity_sync_adapter.dart';
 import 'package:havena/core/sync/sync_engine.dart';
-import 'package:havena/features/clients/sync/client_sync_adapter.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
 
@@ -21,9 +21,10 @@ import 'package:havena/features/photos/repositories/photos_repository.dart';
 /// Deux volets, indépendants l'un de l'autre :
 /// - **Données métier** (Firestore, via `SyncEngine`) : toujours possible,
 ///   l'authentification passe par la session Firebase déjà ouverte à la
-///   connexion à l'app — pas besoin de « connexion Drive » séparée. Seul
-///   `ClientSyncAdapter` est branché pour l'instant (entité de référence,
-///   les autres modules suivront le même pattern).
+///   connexion à l'app — pas besoin de « connexion Drive » séparée.
+///   [businessAdapters] liste tous les modules déjà branchés à la
+///   synchronisation (voir `SyncBinding`) — ajouter un module s'y résume à
+///   ajouter son adaptateur à cette liste, aucun autre changement ici.
 /// - **Photos** (Google Drive) : upload des photos locales non encore
 ///   synchronisées, nécessite la connexion OAuth Drive explicite
 ///   (`connect()`/`isConnected`).
@@ -35,14 +36,17 @@ class SyncController extends GetxController {
     required LogementsRepository logementsRepository,
     required GetStorageService storage,
     required SyncEngine syncEngine,
-    required ClientSyncAdapter clientSyncAdapter,
+    required List<EntitySyncAdapter> businessAdapters,
   })  : _authService = authService,
         _syncService = syncService,
         _photosRepository = photosRepository,
         _logementsRepository = logementsRepository,
         _storage = storage,
         _syncEngine = syncEngine,
-        _clientSyncAdapter = clientSyncAdapter;
+        _adaptersByCollection = {
+          for (final adapter in businessAdapters)
+            adapter.collectionName: adapter,
+        };
 
   final GoogleDriveAuthService _authService;
   final GoogleDriveSyncService _syncService;
@@ -50,7 +54,7 @@ class SyncController extends GetxController {
   final LogementsRepository _logementsRepository;
   final GetStorageService _storage;
   final SyncEngine _syncEngine;
-  final ClientSyncAdapter _clientSyncAdapter;
+  final Map<String, EntitySyncAdapter> _adaptersByCollection;
 
   static const String _lastSyncKey = 'google_drive_last_sync_at';
   static const String _lastBusinessSyncKey = 'business_data_last_sync_at';
@@ -125,11 +129,13 @@ class SyncController extends GetxController {
     isSyncing.value = true;
     error.value = null;
     try {
-      final conflicts = await _syncEngine.syncEntity(
-        _clientSyncAdapter,
-        lastDeviceSyncAt: _lastBusinessSyncAt,
-      );
-      pendingConflicts.addAll(conflicts);
+      for (final adapter in _adaptersByCollection.values) {
+        final conflicts = await _syncEngine.syncEntity(
+          adapter,
+          lastDeviceSyncAt: _lastBusinessSyncAt,
+        );
+        pendingConflicts.addAll(conflicts);
+      }
       _lastBusinessSyncAt = DateTime.now();
       await _storage.write(
         _lastBusinessSyncKey,
@@ -190,15 +196,14 @@ class SyncController extends GetxController {
 
   /// Applique la résolution d'un conflit métier (choix global ou champ par
   /// champ, voir `FieldMergeResolver`) et le retire de [pendingConflicts].
-  Future<void> resolveClientConflict(
+  /// Retrouve l'adaptateur concerné via `conflict.collectionName`.
+  Future<void> resolveConflict(
     SyncConflict conflict,
     Map<String, dynamic> resolvedData,
   ) async {
-    await _syncEngine.resolveConflict(
-      _clientSyncAdapter,
-      conflict,
-      resolvedData,
-    );
+    final adapter = _adaptersByCollection[conflict.collectionName];
+    if (adapter == null) return;
+    await _syncEngine.resolveConflict(adapter, conflict, resolvedData);
     pendingConflicts.remove(conflict);
   }
 }

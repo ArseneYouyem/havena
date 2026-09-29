@@ -19,7 +19,7 @@ class SyncStatusIndicator extends StatelessWidget {
         SyncConflictDialog(
           conflict: conflict,
           onResolve: (resolved) =>
-              controller.resolveClientConflict(conflict, resolved),
+              controller.resolveConflict(conflict, resolved),
         ),
         barrierDismissible: false,
       );
