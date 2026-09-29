@@ -4,12 +4,14 @@ import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/core/auth/role_permissions.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:havena/core/storage/file_storage_service.dart';
 import 'package:havena/core/storage/get_storage_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/auth/repositories/auth_repository.dart';
 import 'package:havena/features/auth/services/auth_session_cache_service.dart';
 import 'package:havena/features/auth/services/firebase_auth_service.dart';
 import 'package:havena/features/auth/services/firestore_users_service.dart';
+import 'package:havena/features/photos/repositories/photos_repository.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -24,6 +26,17 @@ class InitialBinding extends Bindings {
     );
     Get.put<ReferenceGeneratorService>(
       ReferenceGeneratorService(Get.find<AppDatabase>()),
+      permanent: true,
+    );
+    Get.put<FileStorageService>(
+      FileStorageService(),
+      permanent: true,
+    );
+    Get.put<PhotosRepository>(
+      PhotosRepository(
+        Get.find<AppDatabase>().photosDao,
+        Get.find<FileStorageService>(),
+      ),
       permanent: true,
     );
     Get.put<NavigationController>(

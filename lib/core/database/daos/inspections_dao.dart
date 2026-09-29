@@ -15,6 +15,13 @@ class InspectionsDao extends DatabaseAccessor<AppDatabase>
   Future<Inspection?> getById(int id) =>
       (select(inspections)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = inspections.id.count();
+    final query = selectOnly(inspections)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(InspectionsCompanion companion) =>
       into(inspections).insert(companion);
 

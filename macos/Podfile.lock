@@ -1199,6 +1199,9 @@ PODS:
     - Firebase/Firestore (~> 12.19.0)
     - firebase_core
     - FlutterMacOS
+  - file_picker_darwin (1.0.0):
+    - Flutter
+    - FlutterMacOS
   - Firebase/Auth (12.19.0):
     - Firebase/CoreOnly
     - FirebaseAuth (~> 12.19.0)
@@ -1379,6 +1382,7 @@ PODS:
 
 DEPENDENCIES:
   - cloud_firestore (from `Flutter/ephemeral/.symlinks/plugins/cloud_firestore/macos`)
+  - file_picker_darwin (from `Flutter/ephemeral/.symlinks/plugins/file_picker_darwin/darwin`)
   - firebase_auth (from `Flutter/ephemeral/.symlinks/plugins/firebase_auth/macos`)
   - firebase_core (from `Flutter/ephemeral/.symlinks/plugins/firebase_core/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
@@ -1407,6 +1411,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   cloud_firestore:
     :path: Flutter/ephemeral/.symlinks/plugins/cloud_firestore/macos
+  file_picker_darwin:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_picker_darwin/darwin
   firebase_auth:
     :path: Flutter/ephemeral/.symlinks/plugins/firebase_auth/macos
   firebase_core:
@@ -1418,6 +1424,7 @@ SPEC CHECKSUMS:
   abseil: a05cc83bf02079535e17169a73c5be5ba47f714b
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   cloud_firestore: a37b32b7baa018519bc515225bdd7bbb27c94fd4
+  file_picker_darwin: 27e043831d68462d54f1c40e724b1f53c9d1e8be
   Firebase: 7ca191e43724142f79fae653547b3382c45413cc
   firebase_auth: cc589f3959d2d28cc3688cddbd65c43e234a4a01
   firebase_core: 591a0c1fe3e3703755d5e489610e123b7ad51085
