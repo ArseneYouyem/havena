@@ -53,6 +53,13 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          Image.asset(
+            'assets/splash.png',
+            height: 36,
+            width: 36,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 12),
           Text(
             title,
             style: const TextStyle(

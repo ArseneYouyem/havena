@@ -11,6 +11,7 @@ Statuts possibles : `À faire` · `En cours` · `Fait` · `Bloqué`
 | Authentification / rôles (Firebase Auth + Firestore) | À faire | Haute | Fondatrice / Coordinateur / Agent HAVENA. Design arrêté (voir CLAUDE.md § Authentification et rôles), pas encore implémenté |
 | Shell desktop (sidebar, topbar, navigation) | Fait | Haute | `AppShellView` unique + `NavigationController` (Rx) : sidebar/topbar restent fixes, seul le contenu central change au clic (plus de transition de page complète) |
 | Charte graphique | Fait | Haute | Couleurs officielles du cahier des charges appliquées (`AppColors` : vert `#1E7A4B`, orange `#E8792E`) |
+| Icône app / splash | Fait | Moyenne | `flutter_launcher_icons` (assets/icon.png, toutes plateformes) + `flutter_native_splash` (assets/splash.png, Android/iOS/Web uniquement — non supporté sur macOS/Windows/Linux par ce package). Splash affiché aussi dans la topbar à côté du nom de l'app |
 | Tableau de bord | En cours | Haute | Placeholder avec indicateurs statiques (0), pas encore connecté au vrai schéma Drift |
 | Clients | À faire | Haute | Référence `HAV-CLI-000001` |
 | Logements | À faire | Haute | Référence `HAV-DLA-000001` |
