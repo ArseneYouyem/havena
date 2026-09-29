@@ -8,6 +8,7 @@ import 'package:havena/features/auth/views/login_view.dart';
 import 'package:havena/features/clients/bindings/clients_binding.dart';
 import 'package:havena/features/dashboard/bindings/dashboard_binding.dart';
 import 'package:havena/features/logements/bindings/logements_binding.dart';
+import 'package:havena/features/prestataires/bindings/prestataires_binding.dart';
 
 class AppPages {
   AppPages._();
@@ -27,6 +28,7 @@ class AppPages {
         ClientsBinding(),
         LogementsBinding(),
         AbonnementsBinding(),
+        PrestatairesBinding(),
       ],
     ),
   ];

@@ -17,6 +17,13 @@ class PrestatairesDao extends DatabaseAccessor<AppDatabase>
         ..where((t) => t.id.equals(id)))
       .getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = prestataires.id.count();
+    final query = selectOnly(prestataires)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(PrestatairesCompanion companion) =>
       into(prestataires).insert(companion);
 

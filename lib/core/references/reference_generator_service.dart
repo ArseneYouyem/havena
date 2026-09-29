@@ -18,6 +18,9 @@ class ReferenceGeneratorService {
   Future<String> nextAbonnementReference() =>
       _next('ABO', _db.abonnementsDao.countAll);
 
+  Future<String> nextPrestataireReference() =>
+      _next('PRE', _db.prestatairesDao.countAll);
+
   Future<String> _next(String prefix, Future<int> Function() countAll) async {
     final count = await countAll();
     final sequence = (count + 1).toString().padLeft(6, '0');
