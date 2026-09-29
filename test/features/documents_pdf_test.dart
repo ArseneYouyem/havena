@@ -38,8 +38,8 @@ void main() {
     final referenceGenerator = ReferenceGeneratorService(database);
     clientsRepository =
         ClientsRepository(database.clientsDao, referenceGenerator);
-    logementsRepository =
-        LogementsRepository(database.logementsDao, referenceGenerator);
+    logementsRepository = LogementsRepository(
+        database.logementsDao, referenceGenerator, clientsRepository);
     interventionsRepository =
         InterventionsRepository(database.interventionsDao, referenceGenerator);
     prestatairesRepository =

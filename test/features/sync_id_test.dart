@@ -54,8 +54,10 @@ void main() {
 
   test('un logement créé reçoit également un syncId unique', () async {
     final referenceGenerator = ReferenceGeneratorService(database);
-    final repository =
-        LogementsRepository(database.logementsDao, referenceGenerator);
+    final clientsRepository =
+        ClientsRepository(database.clientsDao, referenceGenerator);
+    final repository = LogementsRepository(
+        database.logementsDao, referenceGenerator, clientsRepository);
 
     await repository.create(address: '1 rue A', updatedBy: 'test-uid');
     await repository.create(address: '2 rue B', updatedBy: 'test-uid');

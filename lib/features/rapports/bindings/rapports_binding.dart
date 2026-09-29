@@ -16,6 +16,7 @@ class RapportsBinding extends Bindings {
     Get.lazyPut<RapportsRepository>(() => RapportsRepository(
           Get.find<AppDatabase>().rapportsDao,
           Get.find<ReferenceGeneratorService>(),
+          Get.find<LogementsRepository>(),
         ));
     Get.lazyPut<RapportsController>(() => RapportsController(
           Get.find<RapportsRepository>(),

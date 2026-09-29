@@ -30,8 +30,8 @@ void main() {
     final referenceGenerator = ReferenceGeneratorService(database);
     clientsRepository =
         ClientsRepository(database.clientsDao, referenceGenerator);
-    logementsRepository =
-        LogementsRepository(database.logementsDao, referenceGenerator);
+    logementsRepository = LogementsRepository(
+        database.logementsDao, referenceGenerator, clientsRepository);
     abonnementsRepository =
         AbonnementsRepository(database.abonnementsDao, referenceGenerator);
     interventionsRepository =
@@ -40,8 +40,8 @@ void main() {
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
     financesRepository =
         FinancesRepository(database.financesDao, referenceGenerator);
-    rapportsRepository =
-        RapportsRepository(database.rapportsDao, referenceGenerator);
+    rapportsRepository = RapportsRepository(
+        database.rapportsDao, referenceGenerator, logementsRepository);
     inspectionsRepository = InspectionsRepository(
       database.inspectionsDao,
       database.inspectionItemsDao,

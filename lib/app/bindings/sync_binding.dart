@@ -14,9 +14,12 @@ import 'package:havena/features/calendrier/sync/calendrier_sync_adapter.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/clients/sync/client_sync_adapter.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
+import 'package:havena/features/logements/sync/logement_sync_adapter.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
 import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 import 'package:havena/features/prestataires/sync/prestataire_sync_adapter.dart';
+import 'package:havena/features/rapports/repositories/rapports_repository.dart';
+import 'package:havena/features/rapports/sync/rapport_sync_adapter.dart';
 
 /// Ne crée aucun repository métier : réutilise ceux déjà enregistrés par
 /// les autres bindings (doit donc être déclarée après eux dans
@@ -49,6 +52,18 @@ class SyncBinding extends Bindings {
     Get.lazyPut<CalendrierSyncAdapter>(
       () => CalendrierSyncAdapter(Get.find<CalendrierRepository>()),
     );
+    Get.lazyPut<LogementSyncAdapter>(
+      () => LogementSyncAdapter(
+        Get.find<LogementsRepository>(),
+        Get.find<ClientsRepository>(),
+      ),
+    );
+    Get.lazyPut<RapportSyncAdapter>(
+      () => RapportSyncAdapter(
+        Get.find<RapportsRepository>(),
+        Get.find<LogementsRepository>(),
+      ),
+    );
     Get.lazyPut<SyncController>(() => SyncController(
           authService: Get.find<GoogleDriveAuthService>(),
           syncService: Get.find<GoogleDriveSyncService>(),
@@ -56,9 +71,15 @@ class SyncBinding extends Bindings {
           logementsRepository: Get.find<LogementsRepository>(),
           storage: Get.find<GetStorageService>(),
           syncEngine: Get.find<SyncEngine>(),
+          // Ordre important : les parents (Clients, Logements) doivent
+          // être synchronisés avant leurs enfants (Rapports...) pour que
+          // la traduction syncId -> id local trouve déjà le parent lors
+          // du premier pull sur un nouvel appareil.
           businessAdapters: <EntitySyncAdapter>[
             Get.find<ClientSyncAdapter>(),
             Get.find<PrestataireSyncAdapter>(),
+            Get.find<LogementSyncAdapter>(),
+            Get.find<RapportSyncAdapter>(),
             Get.find<CalendrierSyncAdapter>(),
           ],
         ));

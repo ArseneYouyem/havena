@@ -14,6 +14,7 @@ class LogementsBinding extends Bindings {
     Get.lazyPut<LogementsRepository>(() => LogementsRepository(
           Get.find<AppDatabase>().logementsDao,
           Get.find<ReferenceGeneratorService>(),
+          Get.find<ClientsRepository>(),
         ));
     Get.lazyPut<LogementsController>(() => LogementsController(
           Get.find<LogementsRepository>(),

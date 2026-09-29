@@ -6,6 +6,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/core/storage/file_storage_service.dart';
+import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
 
@@ -20,8 +21,10 @@ void main() {
     tempDir = await Directory.systemTemp.createTemp('havena_photos_test_');
     database = AppDatabase(NativeDatabase.memory());
     final referenceGenerator = ReferenceGeneratorService(database);
-    logementsRepository =
-        LogementsRepository(database.logementsDao, referenceGenerator);
+    final clientsRepository =
+        ClientsRepository(database.clientsDao, referenceGenerator);
+    logementsRepository = LogementsRepository(
+        database.logementsDao, referenceGenerator, clientsRepository);
     photosRepository = PhotosRepository(
       database.photosDao,
       FileStorageService(baseDirectory: tempDir),

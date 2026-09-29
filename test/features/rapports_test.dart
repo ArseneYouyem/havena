@@ -4,6 +4,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/pdf/rapport_pdf_generator.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/rapports/repositories/rapports_repository.dart';
 
@@ -15,10 +16,12 @@ void main() {
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
     final referenceGenerator = ReferenceGeneratorService(database);
-    logementsRepository =
-        LogementsRepository(database.logementsDao, referenceGenerator);
-    rapportsRepository =
-        RapportsRepository(database.rapportsDao, referenceGenerator);
+    final clientsRepository =
+        ClientsRepository(database.clientsDao, referenceGenerator);
+    logementsRepository = LogementsRepository(
+        database.logementsDao, referenceGenerator, clientsRepository);
+    rapportsRepository = RapportsRepository(
+        database.rapportsDao, referenceGenerator, logementsRepository);
   });
 
   tearDown(() async {
