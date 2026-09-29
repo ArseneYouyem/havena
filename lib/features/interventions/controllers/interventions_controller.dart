@@ -287,13 +287,16 @@ class InterventionsController extends GetxController {
   Future<void> addPhotos(List<String> filePaths, {required bool isBefore}) async {
     final intervention = selectedIntervention.value;
     if (intervention == null) return;
+    final logement = _findLogement(intervention.logementId);
 
     final photos = isBefore ? beforePhotos : afterPhotos;
     int sequence = photos.length + 1;
     for (final path in filePaths) {
       await _photosRepository.addPhotoFromFile(
         sourcePath: path,
+        logementReference: logement?.reference ?? intervention.reference,
         entityReference: intervention.reference,
+        logementId: intervention.logementId,
         interventionId: intervention.id,
         photoType: isBefore
             ? PhotoType.avantIntervention

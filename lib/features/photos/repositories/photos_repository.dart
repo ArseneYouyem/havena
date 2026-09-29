@@ -24,6 +24,7 @@ class PhotosRepository {
 
   Future<void> addPhotoFromFile({
     required String sourcePath,
+    required String logementReference,
     required String entityReference,
     int? logementId,
     int? interventionId,
@@ -34,6 +35,8 @@ class PhotosRepository {
   }) async {
     final storedPath = await _fileStorageService.copyPhotoToAppStorage(
       sourcePath: sourcePath,
+      logementReference: logementReference,
+      categoryFolder: _categoryFolderFor(photoType),
       entityReference: entityReference,
       typeLabel: photoType.name.toUpperCase(),
       sequence: sequence,
@@ -54,4 +57,20 @@ class PhotosRepository {
   }
 
   Future<void> delete(int id) => _dao.softDelete(id);
+
+  /// Dossier PHOTOS par logement, cahier des charges §16.
+  String _categoryFolderFor(PhotoType type) {
+    switch (type) {
+      case PhotoType.etatInitial:
+        return '01 - Etat initial';
+      case PhotoType.inspection:
+        return '02 - Inspections';
+      case PhotoType.avantIntervention:
+        return '04 - Avant';
+      case PhotoType.apresIntervention:
+        return '05 - Apres';
+      case PhotoType.autre:
+        return '06 - Autres';
+    }
+  }
 }

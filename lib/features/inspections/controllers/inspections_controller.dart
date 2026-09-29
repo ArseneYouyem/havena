@@ -188,11 +188,14 @@ class InspectionsController extends GetxController {
   Future<void> addPhotos(List<String> filePaths) async {
     final inspection = selectedInspection.value;
     if (inspection == null) return;
+    final logement = _findLogement(inspection.logementId);
     int sequence = inspectionPhotos.length + 1;
     for (final path in filePaths) {
       await _photosRepository.addPhotoFromFile(
         sourcePath: path,
+        logementReference: logement?.reference ?? inspection.reference,
         entityReference: inspection.reference,
+        logementId: inspection.logementId,
         inspectionId: inspection.id,
         photoType: PhotoType.inspection,
         sequence: sequence++,
