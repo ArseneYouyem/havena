@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/finances_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class FinancesRepository {
   FinancesRepository(this._dao, this._referenceGenerator);
@@ -28,6 +29,7 @@ class FinancesRepository {
     final reference = await _referenceGenerator.nextFinanceReference();
     await _dao.insertOne(FinancesCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       transactionDate: Value(transactionDate),
       transactionType: Value(transactionType),
       relatedClientId: Value(relatedClientId),

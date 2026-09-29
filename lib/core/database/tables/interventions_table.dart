@@ -49,6 +49,10 @@ class Interventions extends Table {
   IntColumn get clientSatisfaction =>
       integer().nullable().named('client_satisfaction')();
 
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  TextColumn get syncId => text().nullable().unique().named('sync_id')();
+
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime).named('updated_at')();
 

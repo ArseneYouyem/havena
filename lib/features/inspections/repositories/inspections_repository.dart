@@ -5,6 +5,7 @@ import 'package:havena/core/database/daos/inspections_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/inspections/inspection_checklist.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class InspectionsRepository {
   InspectionsRepository(
@@ -30,6 +31,7 @@ class InspectionsRepository {
 
     final inspectionId = await _dao.insertOne(InspectionsCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       logementId: Value(logementId),
       inspectionDate: Value(inspectionDate),
       updatedAt: Value(DateTime.now()),

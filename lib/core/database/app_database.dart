@@ -73,5 +73,47 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'havena'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          // v1 -> v2 : ajout de `syncId` (UUID) sur les tables métier, pour
+          // la synchronisation Firestore multi-appareils (les `id` locaux
+          // auto-incrémentés et les références HAV-XXX peuvent entrer en
+          // collision entre appareils, `syncId` non).
+          if (from < 2) {
+            await m.addColumn(clients, clients.syncId);
+            await m.addColumn(logements, logements.syncId);
+            await m.addColumn(abonnements, abonnements.syncId);
+            await m.addColumn(interventions, interventions.syncId);
+            await m.addColumn(prestataires, prestataires.syncId);
+            await m.addColumn(finances, finances.syncId);
+            await m.addColumn(rapports, rapports.syncId);
+            await m.addColumn(inspections, inspections.syncId);
+            await m.addColumn(
+                calendrierEvenements, calendrierEvenements.syncId);
+
+            // Comble `sync_id` pour les lignes déjà existantes (créées
+            // avant l'introduction de la colonne). `randomblob(16)` suffit
+            // largement en unicité, pas besoin du format UUID exact ici :
+            // le champ n'est jamais affiché, seulement comparé.
+            for (final tableName in [
+              'clients',
+              'logements',
+              'abonnements',
+              'interventions',
+              'prestataires',
+              'finances',
+              'rapports',
+              'inspections',
+              'calendrier_evenements',
+            ]) {
+              await customStatement(
+                'UPDATE $tableName SET sync_id = lower(hex(randomblob(16))) WHERE sync_id IS NULL',
+              );
+            }
+          }
+        },
+      );
 }

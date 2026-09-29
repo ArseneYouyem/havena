@@ -38,6 +38,11 @@ class Clients extends Table {
 
   TextColumn get notes => text().nullable()();
 
+  /// Identifiant global unique (UUID), généré à la création, utilisé comme
+  /// clé de document Firestore pour la synchronisation multi-appareils —
+  /// jamais affiché, `reference` reste l'identifiant visible/imprimé.
+  TextColumn get syncId => text().nullable().unique().named('sync_id')();
+
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime).named('updated_at')();
 

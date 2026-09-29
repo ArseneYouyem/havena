@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/clients_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class ClientsRepository {
   ClientsRepository(this._dao, this._referenceGenerator);
@@ -32,6 +33,7 @@ class ClientsRepository {
     final reference = await _referenceGenerator.nextClientReference();
     await _dao.insertOne(ClientsCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       fullName: Value(fullName),
       phone: Value(phone),
       whatsapp: Value(whatsapp),

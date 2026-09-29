@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/interventions_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class InterventionsRepository {
   InterventionsRepository(this._dao, this._referenceGenerator);
@@ -27,6 +28,7 @@ class InterventionsRepository {
 
     return _dao.insertOne(InterventionsCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       logementId: Value(logementId),
       clientId: Value(clientId),
       problemDescription: Value(problemDescription),

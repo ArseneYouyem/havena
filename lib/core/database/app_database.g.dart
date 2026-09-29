@@ -632,6 +632,16 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -698,6 +708,7 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
     status,
     lastContactDate,
     notes,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -826,6 +837,12 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -919,6 +936,10 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -968,6 +989,11 @@ class Client extends DataClass implements Insertable<Client> {
   final ClientStatus status;
   final DateTime? lastContactDate;
   final String? notes;
+
+  /// Identifiant global unique (UUID), généré à la création, utilisé comme
+  /// clé de document Firestore pour la synchronisation multi-appareils —
+  /// jamais affiché, `reference` reste l'identifiant visible/imprimé.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -989,6 +1015,7 @@ class Client extends DataClass implements Insertable<Client> {
     required this.status,
     this.lastContactDate,
     this.notes,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -1032,6 +1059,9 @@ class Client extends DataClass implements Insertable<Client> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -1080,6 +1110,9 @@ class Client extends DataClass implements Insertable<Client> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -1117,6 +1150,7 @@ class Client extends DataClass implements Insertable<Client> {
       ),
       lastContactDate: serializer.fromJson<DateTime?>(json['lastContactDate']),
       notes: serializer.fromJson<String?>(json['notes']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $ClientsTable.$convertersyncStatus.fromJson(
@@ -1147,6 +1181,7 @@ class Client extends DataClass implements Insertable<Client> {
       ),
       'lastContactDate': serializer.toJson<DateTime?>(lastContactDate),
       'notes': serializer.toJson<String?>(notes),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -1173,6 +1208,7 @@ class Client extends DataClass implements Insertable<Client> {
     ClientStatus? status,
     Value<DateTime?> lastContactDate = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -1200,6 +1236,7 @@ class Client extends DataClass implements Insertable<Client> {
         ? lastContactDate.value
         : this.lastContactDate,
     notes: notes.present ? notes.value : this.notes,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -1233,6 +1270,7 @@ class Client extends DataClass implements Insertable<Client> {
           ? data.lastContactDate.value
           : this.lastContactDate,
       notes: data.notes.present ? data.notes.value : this.notes,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -1261,6 +1299,7 @@ class Client extends DataClass implements Insertable<Client> {
           ..write('status: $status, ')
           ..write('lastContactDate: $lastContactDate, ')
           ..write('notes: $notes, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -1270,7 +1309,7 @@ class Client extends DataClass implements Insertable<Client> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     reference,
     fullName,
@@ -1287,11 +1326,12 @@ class Client extends DataClass implements Insertable<Client> {
     status,
     lastContactDate,
     notes,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
     isDeleted,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1312,6 +1352,7 @@ class Client extends DataClass implements Insertable<Client> {
           other.status == this.status &&
           other.lastContactDate == this.lastContactDate &&
           other.notes == this.notes &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -1335,6 +1376,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
   final Value<ClientStatus> status;
   final Value<DateTime?> lastContactDate;
   final Value<String?> notes;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -1356,6 +1398,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     this.status = const Value.absent(),
     this.lastContactDate = const Value.absent(),
     this.notes = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -1378,6 +1421,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     required ClientStatus status,
     this.lastContactDate = const Value.absent(),
     this.notes = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -1406,6 +1450,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     Expression<String>? status,
     Expression<DateTime>? lastContactDate,
     Expression<String>? notes,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -1429,6 +1474,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
       if (status != null) 'status': status,
       if (lastContactDate != null) 'last_contact_date': lastContactDate,
       if (notes != null) 'notes': notes,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -1453,6 +1499,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     Value<ClientStatus>? status,
     Value<DateTime?>? lastContactDate,
     Value<String?>? notes,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -1475,6 +1522,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
       status: status ?? this.status,
       lastContactDate: lastContactDate ?? this.lastContactDate,
       notes: notes ?? this.notes,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -1535,6 +1583,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -1571,6 +1622,7 @@ class ClientsCompanion extends UpdateCompanion<Client> {
           ..write('status: $status, ')
           ..write('lastContactDate: $lastContactDate, ')
           ..write('notes: $notes, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -1767,6 +1819,16 @@ class $LogementsTable extends Logements
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -1833,6 +1895,7 @@ class $LogementsTable extends Logements
     nextInspectionDate,
     generalCondition,
     notes,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -1962,6 +2025,12 @@ class $LogementsTable extends Logements
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -2055,6 +2124,10 @@ class $LogementsTable extends Logements
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -2110,6 +2183,10 @@ class Logement extends DataClass implements Insertable<Logement> {
   final DateTime? nextInspectionDate;
   final HousingCondition? generalCondition;
   final String? notes;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -2131,6 +2208,7 @@ class Logement extends DataClass implements Insertable<Logement> {
     this.nextInspectionDate,
     this.generalCondition,
     this.notes,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -2182,6 +2260,9 @@ class Logement extends DataClass implements Insertable<Logement> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -2240,6 +2321,9 @@ class Logement extends DataClass implements Insertable<Logement> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -2277,6 +2361,7 @@ class Logement extends DataClass implements Insertable<Logement> {
         serializer.fromJson<String?>(json['generalCondition']),
       ),
       notes: serializer.fromJson<String?>(json['notes']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $LogementsTable.$convertersyncStatus.fromJson(
@@ -2307,6 +2392,7 @@ class Logement extends DataClass implements Insertable<Logement> {
         $LogementsTable.$convertergeneralConditionn.toJson(generalCondition),
       ),
       'notes': serializer.toJson<String?>(notes),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -2333,6 +2419,7 @@ class Logement extends DataClass implements Insertable<Logement> {
     Value<DateTime?> nextInspectionDate = const Value.absent(),
     Value<HousingCondition?> generalCondition = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -2364,6 +2451,7 @@ class Logement extends DataClass implements Insertable<Logement> {
         ? generalCondition.value
         : this.generalCondition,
     notes: notes.present ? notes.value : this.notes,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -2403,6 +2491,7 @@ class Logement extends DataClass implements Insertable<Logement> {
           ? data.generalCondition.value
           : this.generalCondition,
       notes: data.notes.present ? data.notes.value : this.notes,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -2431,6 +2520,7 @@ class Logement extends DataClass implements Insertable<Logement> {
           ..write('nextInspectionDate: $nextInspectionDate, ')
           ..write('generalCondition: $generalCondition, ')
           ..write('notes: $notes, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -2440,7 +2530,7 @@ class Logement extends DataClass implements Insertable<Logement> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     reference,
     clientId,
@@ -2457,11 +2547,12 @@ class Logement extends DataClass implements Insertable<Logement> {
     nextInspectionDate,
     generalCondition,
     notes,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
     isDeleted,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2482,6 +2573,7 @@ class Logement extends DataClass implements Insertable<Logement> {
           other.nextInspectionDate == this.nextInspectionDate &&
           other.generalCondition == this.generalCondition &&
           other.notes == this.notes &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -2505,6 +2597,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
   final Value<DateTime?> nextInspectionDate;
   final Value<HousingCondition?> generalCondition;
   final Value<String?> notes;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -2526,6 +2619,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
     this.nextInspectionDate = const Value.absent(),
     this.generalCondition = const Value.absent(),
     this.notes = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -2548,6 +2642,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
     this.nextInspectionDate = const Value.absent(),
     this.generalCondition = const Value.absent(),
     this.notes = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -2571,6 +2666,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
     Expression<DateTime>? nextInspectionDate,
     Expression<String>? generalCondition,
     Expression<String>? notes,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -2595,6 +2691,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
         'next_inspection_date': nextInspectionDate,
       if (generalCondition != null) 'general_condition': generalCondition,
       if (notes != null) 'notes': notes,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -2619,6 +2716,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
     Value<DateTime?>? nextInspectionDate,
     Value<HousingCondition?>? generalCondition,
     Value<String?>? notes,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -2641,6 +2739,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
       nextInspectionDate: nextInspectionDate ?? this.nextInspectionDate,
       generalCondition: generalCondition ?? this.generalCondition,
       notes: notes ?? this.notes,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -2707,6 +2806,9 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -2743,6 +2845,7 @@ class LogementsCompanion extends UpdateCompanion<Logement> {
           ..write('nextInspectionDate: $nextInspectionDate, ')
           ..write('generalCondition: $generalCondition, ')
           ..write('notes: $notes, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -2921,6 +3024,16 @@ class $AbonnementsTable extends Abonnements
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -2985,6 +3098,7 @@ class $AbonnementsTable extends Abonnements
     lastInspectionDate,
     nextInspectionDate,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -3110,6 +3224,12 @@ class $AbonnementsTable extends Abonnements
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -3195,6 +3315,10 @@ class $AbonnementsTable extends Abonnements
         DriftSqlType.string,
         data['${effectivePrefix}observations'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -3244,6 +3368,10 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
   final DateTime? lastInspectionDate;
   final DateTime? nextInspectionDate;
   final String? observations;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -3263,6 +3391,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
     this.lastInspectionDate,
     this.nextInspectionDate,
     this.observations,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -3300,6 +3429,9 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
     }
     if (!nullToAbsent || observations != null) {
       map['observations'] = Variable<String>(observations);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -3342,6 +3474,9 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
       observations: observations == null && nullToAbsent
           ? const Value.absent()
           : Value(observations),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -3377,6 +3512,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
         json['nextInspectionDate'],
       ),
       observations: serializer.fromJson<String?>(json['observations']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $AbonnementsTable.$convertersyncStatus.fromJson(
@@ -3405,6 +3541,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
       'lastInspectionDate': serializer.toJson<DateTime?>(lastInspectionDate),
       'nextInspectionDate': serializer.toJson<DateTime?>(nextInspectionDate),
       'observations': serializer.toJson<String?>(observations),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -3429,6 +3566,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
     Value<DateTime?> lastInspectionDate = const Value.absent(),
     Value<DateTime?> nextInspectionDate = const Value.absent(),
     Value<String?> observations = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -3456,6 +3594,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
         ? nextInspectionDate.value
         : this.nextInspectionDate,
     observations: observations.present ? observations.value : this.observations,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -3495,6 +3634,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
       observations: data.observations.present
           ? data.observations.value
           : this.observations,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -3521,6 +3661,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
           ..write('lastInspectionDate: $lastInspectionDate, ')
           ..write('nextInspectionDate: $nextInspectionDate, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -3545,6 +3686,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
     lastInspectionDate,
     nextInspectionDate,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -3568,6 +3710,7 @@ class Abonnement extends DataClass implements Insertable<Abonnement> {
           other.lastInspectionDate == this.lastInspectionDate &&
           other.nextInspectionDate == this.nextInspectionDate &&
           other.observations == this.observations &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -3589,6 +3732,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
   final Value<DateTime?> lastInspectionDate;
   final Value<DateTime?> nextInspectionDate;
   final Value<String?> observations;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -3608,6 +3752,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
     this.lastInspectionDate = const Value.absent(),
     this.nextInspectionDate = const Value.absent(),
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -3628,6 +3773,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
     this.lastInspectionDate = const Value.absent(),
     this.nextInspectionDate = const Value.absent(),
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -3654,6 +3800,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
     Expression<DateTime>? lastInspectionDate,
     Expression<DateTime>? nextInspectionDate,
     Expression<String>? observations,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -3676,6 +3823,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
       if (nextInspectionDate != null)
         'next_inspection_date': nextInspectionDate,
       if (observations != null) 'observations': observations,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -3698,6 +3846,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
     Value<DateTime?>? lastInspectionDate,
     Value<DateTime?>? nextInspectionDate,
     Value<String?>? observations,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -3718,6 +3867,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
       lastInspectionDate: lastInspectionDate ?? this.lastInspectionDate,
       nextInspectionDate: nextInspectionDate ?? this.nextInspectionDate,
       observations: observations ?? this.observations,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -3776,6 +3926,9 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
     if (observations.present) {
       map['observations'] = Variable<String>(observations.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -3810,6 +3963,7 @@ class AbonnementsCompanion extends UpdateCompanion<Abonnement> {
           ..write('lastInspectionDate: $lastInspectionDate, ')
           ..write('nextInspectionDate: $nextInspectionDate, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -3936,6 +4090,16 @@ class $InspectionsTable extends Inspections
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -3995,6 +4159,7 @@ class $InspectionsTable extends Inspections
     recommendations,
     isValidated,
     validatedAt,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -4078,6 +4243,12 @@ class $InspectionsTable extends Inspections
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -4143,6 +4314,10 @@ class $InspectionsTable extends Inspections
         DriftSqlType.dateTime,
         data['${effectivePrefix}validated_at'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -4191,6 +4366,10 @@ class Inspection extends DataClass implements Insertable<Inspection> {
   final String? recommendations;
   final bool isValidated;
   final DateTime? validatedAt;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -4205,6 +4384,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
     this.recommendations,
     required this.isValidated,
     this.validatedAt,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -4231,6 +4411,9 @@ class Inspection extends DataClass implements Insertable<Inspection> {
     map['is_validated'] = Variable<bool>(isValidated);
     if (!nullToAbsent || validatedAt != null) {
       map['validated_at'] = Variable<DateTime>(validatedAt);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -4264,6 +4447,9 @@ class Inspection extends DataClass implements Insertable<Inspection> {
       validatedAt: validatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(validatedAt),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -4290,6 +4476,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
       recommendations: serializer.fromJson<String?>(json['recommendations']),
       isValidated: serializer.fromJson<bool>(json['isValidated']),
       validatedAt: serializer.fromJson<DateTime?>(json['validatedAt']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $InspectionsTable.$convertersyncStatus.fromJson(
@@ -4313,6 +4500,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
       'recommendations': serializer.toJson<String?>(recommendations),
       'isValidated': serializer.toJson<bool>(isValidated),
       'validatedAt': serializer.toJson<DateTime?>(validatedAt),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -4332,6 +4520,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
     Value<String?> recommendations = const Value.absent(),
     bool? isValidated,
     Value<DateTime?> validatedAt = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -4350,6 +4539,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
         : this.recommendations,
     isValidated: isValidated ?? this.isValidated,
     validatedAt: validatedAt.present ? validatedAt.value : this.validatedAt,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -4380,6 +4570,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
       validatedAt: data.validatedAt.present
           ? data.validatedAt.value
           : this.validatedAt,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -4401,6 +4592,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
           ..write('recommendations: $recommendations, ')
           ..write('isValidated: $isValidated, ')
           ..write('validatedAt: $validatedAt, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -4420,6 +4612,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
     recommendations,
     isValidated,
     validatedAt,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -4438,6 +4631,7 @@ class Inspection extends DataClass implements Insertable<Inspection> {
           other.recommendations == this.recommendations &&
           other.isValidated == this.isValidated &&
           other.validatedAt == this.validatedAt &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -4454,6 +4648,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
   final Value<String?> recommendations;
   final Value<bool> isValidated;
   final Value<DateTime?> validatedAt;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -4468,6 +4663,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
     this.recommendations = const Value.absent(),
     this.isValidated = const Value.absent(),
     this.validatedAt = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -4483,6 +4679,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
     this.recommendations = const Value.absent(),
     this.isValidated = const Value.absent(),
     this.validatedAt = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -4500,6 +4697,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
     Expression<String>? recommendations,
     Expression<bool>? isValidated,
     Expression<DateTime>? validatedAt,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -4515,6 +4713,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
       if (recommendations != null) 'recommendations': recommendations,
       if (isValidated != null) 'is_validated': isValidated,
       if (validatedAt != null) 'validated_at': validatedAt,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -4532,6 +4731,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
     Value<String?>? recommendations,
     Value<bool>? isValidated,
     Value<DateTime?>? validatedAt,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -4547,6 +4747,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
       recommendations: recommendations ?? this.recommendations,
       isValidated: isValidated ?? this.isValidated,
       validatedAt: validatedAt ?? this.validatedAt,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -4588,6 +4789,9 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
     if (validatedAt.present) {
       map['validated_at'] = Variable<DateTime>(validatedAt.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -4617,6 +4821,7 @@ class InspectionsCompanion extends UpdateCompanion<Inspection> {
           ..write('recommendations: $recommendations, ')
           ..write('isValidated: $isValidated, ')
           ..write('validatedAt: $validatedAt, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -5447,6 +5652,16 @@ class $PrestatairesTable extends Prestataires
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -5514,6 +5729,7 @@ class $PrestatairesTable extends Prestataires
     interventionsCount,
     lastInterventionDate,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -5662,6 +5878,12 @@ class $PrestatairesTable extends Prestataires
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -5759,6 +5981,10 @@ class $PrestatairesTable extends Prestataires
         DriftSqlType.string,
         data['${effectivePrefix}observations'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -5811,6 +6037,10 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
   final int interventionsCount;
   final DateTime? lastInterventionDate;
   final String? observations;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -5833,6 +6063,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
     required this.interventionsCount,
     this.lastInterventionDate,
     this.observations,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -5877,6 +6108,9 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
     }
     if (!nullToAbsent || observations != null) {
       map['observations'] = Variable<String>(observations);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -5924,6 +6158,9 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
       observations: observations == null && nullToAbsent
           ? const Value.absent()
           : Value(observations),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -5964,6 +6201,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
         json['lastInterventionDate'],
       ),
       observations: serializer.fromJson<String?>(json['observations']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $PrestatairesTable.$convertersyncStatus.fromJson(
@@ -5997,6 +6235,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
         lastInterventionDate,
       ),
       'observations': serializer.toJson<String?>(observations),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -6024,6 +6263,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
     int? interventionsCount,
     Value<DateTime?> lastInterventionDate = const Value.absent(),
     Value<String?> observations = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -6058,6 +6298,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
         ? lastInterventionDate.value
         : this.lastInterventionDate,
     observations: observations.present ? observations.value : this.observations,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -6102,6 +6343,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
       observations: data.observations.present
           ? data.observations.value
           : this.observations,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -6131,6 +6373,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
           ..write('interventionsCount: $interventionsCount, ')
           ..write('lastInterventionDate: $lastInterventionDate, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -6158,6 +6401,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
     interventionsCount,
     lastInterventionDate,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -6184,6 +6428,7 @@ class Prestataire extends DataClass implements Insertable<Prestataire> {
           other.interventionsCount == this.interventionsCount &&
           other.lastInterventionDate == this.lastInterventionDate &&
           other.observations == this.observations &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -6208,6 +6453,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
   final Value<int> interventionsCount;
   final Value<DateTime?> lastInterventionDate;
   final Value<String?> observations;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -6230,6 +6476,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
     this.interventionsCount = const Value.absent(),
     this.lastInterventionDate = const Value.absent(),
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -6253,6 +6500,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
     this.interventionsCount = const Value.absent(),
     this.lastInterventionDate = const Value.absent(),
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -6280,6 +6528,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
     Expression<int>? interventionsCount,
     Expression<DateTime>? lastInterventionDate,
     Expression<String>? observations,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -6305,6 +6554,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
       if (lastInterventionDate != null)
         'last_intervention_date': lastInterventionDate,
       if (observations != null) 'observations': observations,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -6330,6 +6580,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
     Value<int>? interventionsCount,
     Value<DateTime?>? lastInterventionDate,
     Value<String?>? observations,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -6353,6 +6604,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
       interventionsCount: interventionsCount ?? this.interventionsCount,
       lastInterventionDate: lastInterventionDate ?? this.lastInterventionDate,
       observations: observations ?? this.observations,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -6418,6 +6670,9 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
     if (observations.present) {
       map['observations'] = Variable<String>(observations.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -6455,6 +6710,7 @@ class PrestatairesCompanion extends UpdateCompanion<Prestataire> {
           ..write('interventionsCount: $interventionsCount, ')
           ..write('lastInterventionDate: $lastInterventionDate, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -6659,6 +6915,16 @@ class $InterventionsTable extends Interventions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -6725,6 +6991,7 @@ class $InterventionsTable extends Interventions
     havenaMargin,
     status,
     clientSatisfaction,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -6858,6 +7125,12 @@ class $InterventionsTable extends Interventions
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -6953,6 +7226,10 @@ class $InterventionsTable extends Interventions
         DriftSqlType.int,
         data['${effectivePrefix}client_satisfaction'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -7008,6 +7285,10 @@ class Intervention extends DataClass implements Insertable<Intervention> {
   final double? havenaMargin;
   final InterventionStatus status;
   final int? clientSatisfaction;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -7029,6 +7310,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     this.havenaMargin,
     required this.status,
     this.clientSatisfaction,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -7077,6 +7359,9 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     if (!nullToAbsent || clientSatisfaction != null) {
       map['client_satisfaction'] = Variable<int>(clientSatisfaction);
     }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
       map['updated_by'] = Variable<String>(updatedBy);
@@ -7124,6 +7409,9 @@ class Intervention extends DataClass implements Insertable<Intervention> {
       clientSatisfaction: clientSatisfaction == null && nullToAbsent
           ? const Value.absent()
           : Value(clientSatisfaction),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -7165,6 +7453,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
         serializer.fromJson<String>(json['status']),
       ),
       clientSatisfaction: serializer.fromJson<int?>(json['clientSatisfaction']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $InterventionsTable.$convertersyncStatus.fromJson(
@@ -7197,6 +7486,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
         $InterventionsTable.$converterstatus.toJson(status),
       ),
       'clientSatisfaction': serializer.toJson<int?>(clientSatisfaction),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -7223,6 +7513,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     Value<double?> havenaMargin = const Value.absent(),
     InterventionStatus? status,
     Value<int?> clientSatisfaction = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -7252,6 +7543,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     clientSatisfaction: clientSatisfaction.present
         ? clientSatisfaction.value
         : this.clientSatisfaction,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -7297,6 +7589,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
       clientSatisfaction: data.clientSatisfaction.present
           ? data.clientSatisfaction.value
           : this.clientSatisfaction,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -7325,6 +7618,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
           ..write('havenaMargin: $havenaMargin, ')
           ..write('status: $status, ')
           ..write('clientSatisfaction: $clientSatisfaction, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -7334,7 +7628,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     reference,
     logementId,
@@ -7351,11 +7645,12 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     havenaMargin,
     status,
     clientSatisfaction,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
     isDeleted,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7376,6 +7671,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
           other.havenaMargin == this.havenaMargin &&
           other.status == this.status &&
           other.clientSatisfaction == this.clientSatisfaction &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -7399,6 +7695,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
   final Value<double?> havenaMargin;
   final Value<InterventionStatus> status;
   final Value<int?> clientSatisfaction;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -7420,6 +7717,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     this.havenaMargin = const Value.absent(),
     this.status = const Value.absent(),
     this.clientSatisfaction = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -7442,6 +7740,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     this.havenaMargin = const Value.absent(),
     required InterventionStatus status,
     this.clientSatisfaction = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -7469,6 +7768,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     Expression<double>? havenaMargin,
     Expression<String>? status,
     Expression<int>? clientSatisfaction,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -7491,6 +7791,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
       if (havenaMargin != null) 'havena_margin': havenaMargin,
       if (status != null) 'status': status,
       if (clientSatisfaction != null) 'client_satisfaction': clientSatisfaction,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -7515,6 +7816,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     Value<double?>? havenaMargin,
     Value<InterventionStatus>? status,
     Value<int?>? clientSatisfaction,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -7537,6 +7839,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
       havenaMargin: havenaMargin ?? this.havenaMargin,
       status: status ?? this.status,
       clientSatisfaction: clientSatisfaction ?? this.clientSatisfaction,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -7599,6 +7902,9 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     if (clientSatisfaction.present) {
       map['client_satisfaction'] = Variable<int>(clientSatisfaction.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -7635,6 +7941,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
           ..write('havenaMargin: $havenaMargin, ')
           ..write('status: $status, ')
           ..write('clientSatisfaction: $clientSatisfaction, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -7784,6 +8091,16 @@ class $FinancesTable extends Finances with TableInfo<$FinancesTable, Finance> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -7846,6 +8163,7 @@ class $FinancesTable extends Finances with TableInfo<$FinancesTable, Finance> {
     status,
     periodMonth,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -7951,6 +8269,12 @@ class $FinancesTable extends Finances with TableInfo<$FinancesTable, Finance> {
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -8030,6 +8354,10 @@ class $FinancesTable extends Finances with TableInfo<$FinancesTable, Finance> {
         DriftSqlType.string,
         data['${effectivePrefix}observations'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -8081,6 +8409,10 @@ class Finance extends DataClass implements Insertable<Finance> {
   final TransactionStatus status;
   final String periodMonth;
   final String? observations;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -8098,6 +8430,7 @@ class Finance extends DataClass implements Insertable<Finance> {
     required this.status,
     required this.periodMonth,
     this.observations,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -8134,6 +8467,9 @@ class Finance extends DataClass implements Insertable<Finance> {
     if (!nullToAbsent || observations != null) {
       map['observations'] = Variable<String>(observations);
     }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
       map['updated_by'] = Variable<String>(updatedBy);
@@ -8169,6 +8505,9 @@ class Finance extends DataClass implements Insertable<Finance> {
       observations: observations == null && nullToAbsent
           ? const Value.absent()
           : Value(observations),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -8202,6 +8541,7 @@ class Finance extends DataClass implements Insertable<Finance> {
       ),
       periodMonth: serializer.fromJson<String>(json['periodMonth']),
       observations: serializer.fromJson<String?>(json['observations']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $FinancesTable.$convertersyncStatus.fromJson(
@@ -8230,6 +8570,7 @@ class Finance extends DataClass implements Insertable<Finance> {
       ),
       'periodMonth': serializer.toJson<String>(periodMonth),
       'observations': serializer.toJson<String?>(observations),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -8252,6 +8593,7 @@ class Finance extends DataClass implements Insertable<Finance> {
     TransactionStatus? status,
     String? periodMonth,
     Value<String?> observations = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -8275,6 +8617,7 @@ class Finance extends DataClass implements Insertable<Finance> {
     status: status ?? this.status,
     periodMonth: periodMonth ?? this.periodMonth,
     observations: observations.present ? observations.value : this.observations,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -8310,6 +8653,7 @@ class Finance extends DataClass implements Insertable<Finance> {
       observations: data.observations.present
           ? data.observations.value
           : this.observations,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -8334,6 +8678,7 @@ class Finance extends DataClass implements Insertable<Finance> {
           ..write('status: $status, ')
           ..write('periodMonth: $periodMonth, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -8356,6 +8701,7 @@ class Finance extends DataClass implements Insertable<Finance> {
     status,
     periodMonth,
     observations,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -8377,6 +8723,7 @@ class Finance extends DataClass implements Insertable<Finance> {
           other.status == this.status &&
           other.periodMonth == this.periodMonth &&
           other.observations == this.observations &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -8396,6 +8743,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
   final Value<TransactionStatus> status;
   final Value<String> periodMonth;
   final Value<String?> observations;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -8413,6 +8761,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
     this.status = const Value.absent(),
     this.periodMonth = const Value.absent(),
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -8431,6 +8780,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
     required TransactionStatus status,
     required String periodMonth,
     this.observations = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -8455,6 +8805,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
     Expression<String>? status,
     Expression<String>? periodMonth,
     Expression<String>? observations,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -8474,6 +8825,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
       if (status != null) 'status': status,
       if (periodMonth != null) 'period_month': periodMonth,
       if (observations != null) 'observations': observations,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -8494,6 +8846,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
     Value<TransactionStatus>? status,
     Value<String>? periodMonth,
     Value<String?>? observations,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -8512,6 +8865,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
       status: status ?? this.status,
       periodMonth: periodMonth ?? this.periodMonth,
       observations: observations ?? this.observations,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -8562,6 +8916,9 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
     if (observations.present) {
       map['observations'] = Variable<String>(observations.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -8594,6 +8951,7 @@ class FinancesCompanion extends UpdateCompanion<Finance> {
           ..write('status: $status, ')
           ..write('periodMonth: $periodMonth, ')
           ..write('observations: $observations, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -9552,6 +9910,16 @@ class $RapportsTable extends Rapports with TableInfo<$RapportsTable, Rapport> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -9615,6 +9983,7 @@ class $RapportsTable extends Rapports with TableInfo<$RapportsTable, Rapport> {
     nextActions,
     pdfLocalPath,
     generatedAt,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -9731,6 +10100,12 @@ class $RapportsTable extends Rapports with TableInfo<$RapportsTable, Rapport> {
         ),
       );
     }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -9812,6 +10187,10 @@ class $RapportsTable extends Rapports with TableInfo<$RapportsTable, Rapport> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}generated_at'],
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -9864,6 +10243,10 @@ class Rapport extends DataClass implements Insertable<Rapport> {
   final String? nextActions;
   final String? pdfLocalPath;
   final DateTime? generatedAt;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -9882,6 +10265,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
     this.nextActions,
     this.pdfLocalPath,
     this.generatedAt,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -9920,6 +10304,9 @@ class Rapport extends DataClass implements Insertable<Rapport> {
     }
     if (!nullToAbsent || generatedAt != null) {
       map['generated_at'] = Variable<DateTime>(generatedAt);
+    }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
@@ -9965,6 +10352,9 @@ class Rapport extends DataClass implements Insertable<Rapport> {
       generatedAt: generatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(generatedAt),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -9997,6 +10387,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
       nextActions: serializer.fromJson<String?>(json['nextActions']),
       pdfLocalPath: serializer.fromJson<String?>(json['pdfLocalPath']),
       generatedAt: serializer.fromJson<DateTime?>(json['generatedAt']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $RapportsTable.$convertersyncStatus.fromJson(
@@ -10024,6 +10415,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
       'nextActions': serializer.toJson<String?>(nextActions),
       'pdfLocalPath': serializer.toJson<String?>(pdfLocalPath),
       'generatedAt': serializer.toJson<DateTime?>(generatedAt),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -10047,6 +10439,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
     Value<String?> nextActions = const Value.absent(),
     Value<String?> pdfLocalPath = const Value.absent(),
     Value<DateTime?> generatedAt = const Value.absent(),
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -10073,6 +10466,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
     nextActions: nextActions.present ? nextActions.value : this.nextActions,
     pdfLocalPath: pdfLocalPath.present ? pdfLocalPath.value : this.pdfLocalPath,
     generatedAt: generatedAt.present ? generatedAt.value : this.generatedAt,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -10113,6 +10507,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
       generatedAt: data.generatedAt.present
           ? data.generatedAt.value
           : this.generatedAt,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -10138,6 +10533,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
           ..write('nextActions: $nextActions, ')
           ..write('pdfLocalPath: $pdfLocalPath, ')
           ..write('generatedAt: $generatedAt, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -10161,6 +10557,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
     nextActions,
     pdfLocalPath,
     generatedAt,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -10183,6 +10580,7 @@ class Rapport extends DataClass implements Insertable<Rapport> {
           other.nextActions == this.nextActions &&
           other.pdfLocalPath == this.pdfLocalPath &&
           other.generatedAt == this.generatedAt &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -10203,6 +10601,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
   final Value<String?> nextActions;
   final Value<String?> pdfLocalPath;
   final Value<DateTime?> generatedAt;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -10221,6 +10620,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
     this.nextActions = const Value.absent(),
     this.pdfLocalPath = const Value.absent(),
     this.generatedAt = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -10240,6 +10640,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
     this.nextActions = const Value.absent(),
     this.pdfLocalPath = const Value.absent(),
     this.generatedAt = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -10261,6 +10662,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
     Expression<String>? nextActions,
     Expression<String>? pdfLocalPath,
     Expression<DateTime>? generatedAt,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -10280,6 +10682,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
       if (nextActions != null) 'next_actions': nextActions,
       if (pdfLocalPath != null) 'pdf_local_path': pdfLocalPath,
       if (generatedAt != null) 'generated_at': generatedAt,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -10301,6 +10704,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
     Value<String?>? nextActions,
     Value<String?>? pdfLocalPath,
     Value<DateTime?>? generatedAt,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -10320,6 +10724,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
       nextActions: nextActions ?? this.nextActions,
       pdfLocalPath: pdfLocalPath ?? this.pdfLocalPath,
       generatedAt: generatedAt ?? this.generatedAt,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -10373,6 +10778,9 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
     if (generatedAt.present) {
       map['generated_at'] = Variable<DateTime>(generatedAt.value);
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -10406,6 +10814,7 @@ class RapportsCompanion extends UpdateCompanion<Rapport> {
           ..write('nextActions: $nextActions, ')
           ..write('pdfLocalPath: $pdfLocalPath, ')
           ..write('generatedAt: $generatedAt, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -11072,6 +11481,16 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
       ).withConverter<CalendarEventStatus>(
         $CalendrierEvenementsTable.$converterstatus,
       );
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+    'sync_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -11131,6 +11550,7 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
     relatedReference,
     responsibleUserId,
     status,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -11183,6 +11603,12 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
           data['responsible_user_id']!,
           _responsibleUserIdMeta,
         ),
+      );
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(
+        _syncIdMeta,
+        syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
       );
     }
     if (data.containsKey('updated_at')) {
@@ -11244,6 +11670,10 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
           data['${effectivePrefix}status'],
         )!,
       ),
+      syncId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -11291,6 +11721,10 @@ class CalendrierEvenement extends DataClass
   final String? relatedReference;
   final int? responsibleUserId;
   final CalendarEventStatus status;
+
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  final String? syncId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -11303,6 +11737,7 @@ class CalendrierEvenement extends DataClass
     this.relatedReference,
     this.responsibleUserId,
     required this.status,
+    this.syncId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -11330,6 +11765,9 @@ class CalendrierEvenement extends DataClass
         $CalendrierEvenementsTable.$converterstatus.toSql(status),
       );
     }
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
       map['updated_by'] = Variable<String>(updatedBy);
@@ -11356,6 +11794,9 @@ class CalendrierEvenement extends DataClass
           ? const Value.absent()
           : Value(responsibleUserId),
       status: Value(status),
+      syncId: syncId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -11382,6 +11823,7 @@ class CalendrierEvenement extends DataClass
       status: $CalendrierEvenementsTable.$converterstatus.fromJson(
         serializer.fromJson<String>(json['status']),
       ),
+      syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $CalendrierEvenementsTable.$convertersyncStatus.fromJson(
@@ -11405,6 +11847,7 @@ class CalendrierEvenement extends DataClass
       'status': serializer.toJson<String>(
         $CalendrierEvenementsTable.$converterstatus.toJson(status),
       ),
+      'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -11422,6 +11865,7 @@ class CalendrierEvenement extends DataClass
     Value<String?> relatedReference = const Value.absent(),
     Value<int?> responsibleUserId = const Value.absent(),
     CalendarEventStatus? status,
+    Value<String?> syncId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -11438,6 +11882,7 @@ class CalendrierEvenement extends DataClass
         ? responsibleUserId.value
         : this.responsibleUserId,
     status: status ?? this.status,
+    syncId: syncId.present ? syncId.value : this.syncId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -11456,6 +11901,7 @@ class CalendrierEvenement extends DataClass
           ? data.responsibleUserId.value
           : this.responsibleUserId,
       status: data.status.present ? data.status.value : this.status,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -11475,6 +11921,7 @@ class CalendrierEvenement extends DataClass
           ..write('relatedReference: $relatedReference, ')
           ..write('responsibleUserId: $responsibleUserId, ')
           ..write('status: $status, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -11492,6 +11939,7 @@ class CalendrierEvenement extends DataClass
     relatedReference,
     responsibleUserId,
     status,
+    syncId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -11508,6 +11956,7 @@ class CalendrierEvenement extends DataClass
           other.relatedReference == this.relatedReference &&
           other.responsibleUserId == this.responsibleUserId &&
           other.status == this.status &&
+          other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -11523,6 +11972,7 @@ class CalendrierEvenementsCompanion
   final Value<String?> relatedReference;
   final Value<int?> responsibleUserId;
   final Value<CalendarEventStatus> status;
+  final Value<String?> syncId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -11535,6 +11985,7 @@ class CalendrierEvenementsCompanion
     this.relatedReference = const Value.absent(),
     this.responsibleUserId = const Value.absent(),
     this.status = const Value.absent(),
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -11548,6 +11999,7 @@ class CalendrierEvenementsCompanion
     this.relatedReference = const Value.absent(),
     this.responsibleUserId = const Value.absent(),
     required CalendarEventStatus status,
+    this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -11564,6 +12016,7 @@ class CalendrierEvenementsCompanion
     Expression<String>? relatedReference,
     Expression<int>? responsibleUserId,
     Expression<String>? status,
+    Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -11577,6 +12030,7 @@ class CalendrierEvenementsCompanion
       if (relatedReference != null) 'related_reference': relatedReference,
       if (responsibleUserId != null) 'responsible_user_id': responsibleUserId,
       if (status != null) 'status': status,
+      if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -11592,6 +12046,7 @@ class CalendrierEvenementsCompanion
     Value<String?>? relatedReference,
     Value<int?>? responsibleUserId,
     Value<CalendarEventStatus>? status,
+    Value<String?>? syncId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -11605,6 +12060,7 @@ class CalendrierEvenementsCompanion
       relatedReference: relatedReference ?? this.relatedReference,
       responsibleUserId: responsibleUserId ?? this.responsibleUserId,
       status: status ?? this.status,
+      syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -11640,6 +12096,9 @@ class CalendrierEvenementsCompanion
         $CalendrierEvenementsTable.$converterstatus.toSql(status.value),
       );
     }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -11667,6 +12126,7 @@ class CalendrierEvenementsCompanion
           ..write('relatedReference: $relatedReference, ')
           ..write('responsibleUserId: $responsibleUserId, ')
           ..write('status: $status, ')
+          ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -12292,6 +12752,7 @@ typedef $$ClientsTableCreateCompanionBuilder =
       required ClientStatus status,
       Value<DateTime?> lastContactDate,
       Value<String?> notes,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -12315,6 +12776,7 @@ typedef $$ClientsTableUpdateCompanionBuilder =
       Value<ClientStatus> status,
       Value<DateTime?> lastContactDate,
       Value<String?> notes,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -12486,6 +12948,11 @@ class $$ClientsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12700,6 +13167,11 @@ class $$ClientsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -12787,6 +13259,9 @@ class $$ClientsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -12953,6 +13428,7 @@ class $$ClientsTableTableManager
                 Value<ClientStatus> status = const Value.absent(),
                 Value<DateTime?> lastContactDate = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -12974,6 +13450,7 @@ class $$ClientsTableTableManager
                 status: status,
                 lastContactDate: lastContactDate,
                 notes: notes,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -12997,6 +13474,7 @@ class $$ClientsTableTableManager
                 required ClientStatus status,
                 Value<DateTime?> lastContactDate = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -13018,6 +13496,7 @@ class $$ClientsTableTableManager
                 status: status,
                 lastContactDate: lastContactDate,
                 notes: notes,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -13178,6 +13657,7 @@ typedef $$LogementsTableCreateCompanionBuilder =
       Value<DateTime?> nextInspectionDate,
       Value<HousingCondition?> generalCondition,
       Value<String?> notes,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -13201,6 +13681,7 @@ typedef $$LogementsTableUpdateCompanionBuilder =
       Value<DateTime?> nextInspectionDate,
       Value<HousingCondition?> generalCondition,
       Value<String?> notes,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -13403,6 +13884,11 @@ class $$LogementsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13660,6 +14146,11 @@ class $$LogementsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -13774,6 +14265,9 @@ class $$LogementsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -13991,6 +14485,7 @@ class $$LogementsTableTableManager
                 Value<HousingCondition?> generalCondition =
                     const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -14012,6 +14507,7 @@ class $$LogementsTableTableManager
                 nextInspectionDate: nextInspectionDate,
                 generalCondition: generalCondition,
                 notes: notes,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -14036,6 +14532,7 @@ class $$LogementsTableTableManager
                 Value<HousingCondition?> generalCondition =
                     const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -14057,6 +14554,7 @@ class $$LogementsTableTableManager
                 nextInspectionDate: nextInspectionDate,
                 generalCondition: generalCondition,
                 notes: notes,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -14272,6 +14770,7 @@ typedef $$AbonnementsTableCreateCompanionBuilder =
       Value<DateTime?> lastInspectionDate,
       Value<DateTime?> nextInspectionDate,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -14293,6 +14792,7 @@ typedef $$AbonnementsTableUpdateCompanionBuilder =
       Value<DateTime?> lastInspectionDate,
       Value<DateTime?> nextInspectionDate,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -14405,6 +14905,11 @@ class $$AbonnementsTableFilterComposer
 
   ColumnFilters<String> get observations => $composableBuilder(
     column: $table.observations,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14545,6 +15050,11 @@ class $$AbonnementsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -14674,6 +15184,9 @@ class $$AbonnementsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -14778,6 +15291,7 @@ class $$AbonnementsTableTableManager
                 Value<DateTime?> lastInspectionDate = const Value.absent(),
                 Value<DateTime?> nextInspectionDate = const Value.absent(),
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -14797,6 +15311,7 @@ class $$AbonnementsTableTableManager
                 lastInspectionDate: lastInspectionDate,
                 nextInspectionDate: nextInspectionDate,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -14818,6 +15333,7 @@ class $$AbonnementsTableTableManager
                 Value<DateTime?> lastInspectionDate = const Value.absent(),
                 Value<DateTime?> nextInspectionDate = const Value.absent(),
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -14837,6 +15353,7 @@ class $$AbonnementsTableTableManager
                 lastInspectionDate: lastInspectionDate,
                 nextInspectionDate: nextInspectionDate,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -14933,6 +15450,7 @@ typedef $$InspectionsTableCreateCompanionBuilder =
       Value<String?> recommendations,
       Value<bool> isValidated,
       Value<DateTime?> validatedAt,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -14949,6 +15467,7 @@ typedef $$InspectionsTableUpdateCompanionBuilder =
       Value<String?> recommendations,
       Value<bool> isValidated,
       Value<DateTime?> validatedAt,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -15063,6 +15582,11 @@ class $$InspectionsTableFilterComposer
 
   ColumnFilters<DateTime> get validatedAt => $composableBuilder(
     column: $table.validatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15210,6 +15734,11 @@ class $$InspectionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -15299,6 +15828,9 @@ class $$InspectionsTableAnnotationComposer
     column: $table.validatedAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -15431,6 +15963,7 @@ class $$InspectionsTableTableManager
                 Value<String?> recommendations = const Value.absent(),
                 Value<bool> isValidated = const Value.absent(),
                 Value<DateTime?> validatedAt = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -15445,6 +15978,7 @@ class $$InspectionsTableTableManager
                 recommendations: recommendations,
                 isValidated: isValidated,
                 validatedAt: validatedAt,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -15462,6 +15996,7 @@ class $$InspectionsTableTableManager
                 Value<String?> recommendations = const Value.absent(),
                 Value<bool> isValidated = const Value.absent(),
                 Value<DateTime?> validatedAt = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -15476,6 +16011,7 @@ class $$InspectionsTableTableManager
                 recommendations: recommendations,
                 isValidated: isValidated,
                 validatedAt: validatedAt,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -16047,6 +16583,7 @@ typedef $$PrestatairesTableCreateCompanionBuilder =
       Value<int> interventionsCount,
       Value<DateTime?> lastInterventionDate,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -16071,6 +16608,7 @@ typedef $$PrestatairesTableUpdateCompanionBuilder =
       Value<int> interventionsCount,
       Value<DateTime?> lastInterventionDate,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -16210,6 +16748,11 @@ class $$PrestatairesTableFilterComposer
 
   ColumnFilters<String> get observations => $composableBuilder(
     column: $table.observations,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16379,6 +16922,11 @@ class $$PrestatairesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -16479,6 +17027,9 @@ class $$PrestatairesTableAnnotationComposer
     column: $table.observations,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -16591,6 +17142,7 @@ class $$PrestatairesTableTableManager
                 Value<int> interventionsCount = const Value.absent(),
                 Value<DateTime?> lastInterventionDate = const Value.absent(),
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -16613,6 +17165,7 @@ class $$PrestatairesTableTableManager
                 interventionsCount: interventionsCount,
                 lastInterventionDate: lastInterventionDate,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -16637,6 +17190,7 @@ class $$PrestatairesTableTableManager
                 Value<int> interventionsCount = const Value.absent(),
                 Value<DateTime?> lastInterventionDate = const Value.absent(),
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -16659,6 +17213,7 @@ class $$PrestatairesTableTableManager
                 interventionsCount: interventionsCount,
                 lastInterventionDate: lastInterventionDate,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -16765,6 +17320,7 @@ typedef $$InterventionsTableCreateCompanionBuilder =
       Value<double?> havenaMargin,
       required InterventionStatus status,
       Value<int?> clientSatisfaction,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -16788,6 +17344,7 @@ typedef $$InterventionsTableUpdateCompanionBuilder =
       Value<double?> havenaMargin,
       Value<InterventionStatus> status,
       Value<int?> clientSatisfaction,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -16947,6 +17504,11 @@ class $$InterventionsTableFilterComposer
 
   ColumnFilters<int> get clientSatisfaction => $composableBuilder(
     column: $table.clientSatisfaction,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17140,6 +17702,11 @@ class $$InterventionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -17296,6 +17863,9 @@ class $$InterventionsTableAnnotationComposer
     column: $table.clientSatisfaction,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -17456,6 +18026,7 @@ class $$InterventionsTableTableManager
                 Value<double?> havenaMargin = const Value.absent(),
                 Value<InterventionStatus> status = const Value.absent(),
                 Value<int?> clientSatisfaction = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -17477,6 +18048,7 @@ class $$InterventionsTableTableManager
                 havenaMargin: havenaMargin,
                 status: status,
                 clientSatisfaction: clientSatisfaction,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -17500,6 +18072,7 @@ class $$InterventionsTableTableManager
                 Value<double?> havenaMargin = const Value.absent(),
                 required InterventionStatus status,
                 Value<int?> clientSatisfaction = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -17521,6 +18094,7 @@ class $$InterventionsTableTableManager
                 havenaMargin: havenaMargin,
                 status: status,
                 clientSatisfaction: clientSatisfaction,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -17672,6 +18246,7 @@ typedef $$FinancesTableCreateCompanionBuilder =
       required TransactionStatus status,
       required String periodMonth,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -17691,6 +18266,7 @@ typedef $$FinancesTableUpdateCompanionBuilder =
       Value<TransactionStatus> status,
       Value<String> periodMonth,
       Value<String?> observations,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -17797,6 +18373,11 @@ class $$FinancesTableFilterComposer
 
   ColumnFilters<String> get observations => $composableBuilder(
     column: $table.observations,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17927,6 +18508,11 @@ class $$FinancesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -18046,6 +18632,9 @@ class $$FinancesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -18151,6 +18740,7 @@ class $$FinancesTableTableManager
                 Value<TransactionStatus> status = const Value.absent(),
                 Value<String> periodMonth = const Value.absent(),
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -18168,6 +18758,7 @@ class $$FinancesTableTableManager
                 status: status,
                 periodMonth: periodMonth,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -18187,6 +18778,7 @@ class $$FinancesTableTableManager
                 required TransactionStatus status,
                 required String periodMonth,
                 Value<String?> observations = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -18204,6 +18796,7 @@ class $$FinancesTableTableManager
                 status: status,
                 periodMonth: periodMonth,
                 observations: observations,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -18961,6 +19554,7 @@ typedef $$RapportsTableCreateCompanionBuilder =
       Value<String?> nextActions,
       Value<String?> pdfLocalPath,
       Value<DateTime?> generatedAt,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -18981,6 +19575,7 @@ typedef $$RapportsTableUpdateCompanionBuilder =
       Value<String?> nextActions,
       Value<String?> pdfLocalPath,
       Value<DateTime?> generatedAt,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -19076,6 +19671,11 @@ class $$RapportsTableFilterComposer
 
   ColumnFilters<DateTime> get generatedAt => $composableBuilder(
     column: $table.generatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19193,6 +19793,11 @@ class $$RapportsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -19301,6 +19906,9 @@ class $$RapportsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -19382,6 +19990,7 @@ class $$RapportsTableTableManager
                 Value<String?> nextActions = const Value.absent(),
                 Value<String?> pdfLocalPath = const Value.absent(),
                 Value<DateTime?> generatedAt = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -19400,6 +20009,7 @@ class $$RapportsTableTableManager
                 nextActions: nextActions,
                 pdfLocalPath: pdfLocalPath,
                 generatedAt: generatedAt,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -19421,6 +20031,7 @@ class $$RapportsTableTableManager
                 Value<String?> nextActions = const Value.absent(),
                 Value<String?> pdfLocalPath = const Value.absent(),
                 Value<DateTime?> generatedAt = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -19439,6 +20050,7 @@ class $$RapportsTableTableManager
                 nextActions: nextActions,
                 pdfLocalPath: pdfLocalPath,
                 generatedAt: generatedAt,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -19810,6 +20422,7 @@ typedef $$CalendrierEvenementsTableCreateCompanionBuilder =
       Value<String?> relatedReference,
       Value<int?> responsibleUserId,
       required CalendarEventStatus status,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -19824,6 +20437,7 @@ typedef $$CalendrierEvenementsTableUpdateCompanionBuilder =
       Value<String?> relatedReference,
       Value<int?> responsibleUserId,
       Value<CalendarEventStatus> status,
+      Value<String?> syncId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -19878,6 +20492,11 @@ class $$CalendrierEvenementsTableFilterComposer
   get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
@@ -19946,6 +20565,11 @@ class $$CalendrierEvenementsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get syncId => $composableBuilder(
+    column: $table.syncId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -20000,6 +20624,9 @@ class $$CalendrierEvenementsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<CalendarEventStatus, String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -20067,6 +20694,7 @@ class $$CalendrierEvenementsTableTableManager
                 Value<String?> relatedReference = const Value.absent(),
                 Value<int?> responsibleUserId = const Value.absent(),
                 Value<CalendarEventStatus> status = const Value.absent(),
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -20079,6 +20707,7 @@ class $$CalendrierEvenementsTableTableManager
                 relatedReference: relatedReference,
                 responsibleUserId: responsibleUserId,
                 status: status,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -20093,6 +20722,7 @@ class $$CalendrierEvenementsTableTableManager
                 Value<String?> relatedReference = const Value.absent(),
                 Value<int?> responsibleUserId = const Value.absent(),
                 required CalendarEventStatus status,
+                Value<String?> syncId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -20105,6 +20735,7 @@ class $$CalendrierEvenementsTableTableManager
                 relatedReference: relatedReference,
                 responsibleUserId: responsibleUserId,
                 status: status,
+                syncId: syncId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,

@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/logements_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class LogementsRepository {
   LogementsRepository(this._dao, this._referenceGenerator);
@@ -30,6 +31,7 @@ class LogementsRepository {
     final reference = await _referenceGenerator.nextLogementReference();
     await _dao.insertOne(LogementsCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       clientId: Value(clientId),
       address: Value(address),
       neighborhood: Value(neighborhood),

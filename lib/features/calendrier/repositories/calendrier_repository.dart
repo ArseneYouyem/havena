@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/calendrier_evenements_dao.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:uuid/uuid.dart';
 
 class CalendrierRepository {
   CalendrierRepository(this._dao);
@@ -19,6 +20,7 @@ class CalendrierRepository {
     required String updatedBy,
   }) async {
     await _dao.insertOne(CalendrierEvenementsCompanion(
+      syncId: Value(const Uuid().v4()),
       eventType: Value(eventType),
       title: Value(title),
       eventDate: Value(eventDate),

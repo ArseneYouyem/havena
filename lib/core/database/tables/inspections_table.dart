@@ -28,6 +28,10 @@ class Inspections extends Table {
   DateTimeColumn get validatedAt =>
       dateTime().nullable().named('validated_at')();
 
+  /// Identifiant global unique (UUID) pour la synchronisation Firestore —
+  /// voir `Clients.syncId`.
+  TextColumn get syncId => text().nullable().unique().named('sync_id')();
+
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime).named('updated_at')();
 

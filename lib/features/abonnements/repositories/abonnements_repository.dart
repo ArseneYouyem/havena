@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/abonnements_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:uuid/uuid.dart';
 
 class AbonnementsRepository {
   AbonnementsRepository(this._dao, this._referenceGenerator);
@@ -28,6 +29,7 @@ class AbonnementsRepository {
     final reference = await _referenceGenerator.nextAbonnementReference();
     await _dao.insertOne(AbonnementsCompanion(
       reference: Value(reference),
+      syncId: Value(const Uuid().v4()),
       clientId: Value(clientId),
       logementId: Value(logementId),
       formula: Value(formula),
