@@ -15,6 +15,13 @@ class AbonnementsDao extends DatabaseAccessor<AppDatabase>
   Future<Abonnement?> getById(int id) =>
       (select(abonnements)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = abonnements.id.count();
+    final query = selectOnly(abonnements)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(AbonnementsCompanion companion) =>
       into(abonnements).insert(companion);
 

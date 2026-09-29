@@ -4,6 +4,7 @@ import 'package:havena/app/controllers/navigation_controller.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/auth/role_permissions.dart';
+import 'package:havena/features/abonnements/views/abonnements_view.dart';
 import 'package:havena/features/access_management/views/access_management_view.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/views/clients_view.dart';
@@ -52,7 +53,7 @@ class AppShellView extends GetView<NavigationController> {
       case AppRoutes.logements:
         return const LogementsContent();
       case AppRoutes.abonnements:
-        return const _PlaceholderContent(title: 'Abonnements');
+        return const AbonnementsContent();
       case AppRoutes.inspections:
         return const _PlaceholderContent(title: 'Inspections');
       case AppRoutes.interventions:
