@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:havena/app/controllers/navigation_controller.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/core/auth/role_permissions.dart';
+import 'package:havena/features/access_management/views/access_management_view.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/dashboard/views/dashboard_view.dart';
 import 'package:havena/shared/widgets/layout/desktop_shell.dart';
 
@@ -12,8 +15,30 @@ class AppShellView extends GetView<NavigationController> {
   @override
   Widget build(BuildContext context) {
     return DesktopShell(
-      child: Obx(() => _buildContent(controller.currentRoute.value)),
+      child: Obx(() => _buildGuardedContent(controller.currentRoute.value)),
     );
+  }
+
+  Widget _buildGuardedContent(String route) {
+    final session = Get.find<SessionController>();
+    final role = session.role;
+
+    if (role == null) {
+      // Pas de session valide : ne devrait pas arriver ici (géré par
+      // initialRoute), mais on évite d'afficher du contenu protégé.
+      return const _PlaceholderContent(title: 'HAVENA');
+    }
+
+    if (!RolePermissions.canAccess(role, route)) {
+      final allowed = RolePermissions.routesFor(role);
+      final fallback = allowed.isNotEmpty ? allowed.first : AppRoutes.dashboard;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.changeTo(fallback);
+      });
+      return const SizedBox.shrink();
+    }
+
+    return _buildContent(route);
   }
 
   Widget _buildContent(String route) {
@@ -38,6 +63,8 @@ class AppShellView extends GetView<NavigationController> {
         return const _PlaceholderContent(title: 'Rapports');
       case AppRoutes.calendrier:
         return const _PlaceholderContent(title: 'Calendrier');
+      case AppRoutes.accessManagement:
+        return const AccessManagementContent();
       default:
         return const _PlaceholderContent(title: 'HAVENA');
     }

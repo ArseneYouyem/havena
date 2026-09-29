@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/auth/repositories/auth_repository.dart';
 import 'package:havena/shared/widgets/layout/sidebar_menu.dart';
 
 class DesktopShell extends StatelessWidget {
@@ -75,6 +79,33 @@ class _TopBar extends StatelessWidget {
               fontSize: 13,
               color: AppColors.textSecondary,
             ),
+          ),
+          const SizedBox(width: 20),
+          Obx(() {
+            final session = Get.find<SessionController>().session.value;
+            if (session == null) return const SizedBox.shrink();
+            return Text(
+              session.fullName,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            );
+          }),
+          const SizedBox(width: 12),
+          IconButton(
+            tooltip: 'Se déconnecter',
+            icon: const Icon(
+              Icons.logout,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
+            onPressed: () async {
+              await Get.find<AuthRepository>().logout();
+              Get.find<SessionController>().clear();
+              Get.offAllNamed(AppRoutes.login);
+            },
           ),
         ],
       ),

@@ -57,11 +57,13 @@ Charte officielle HAVENA (cahier des charges, annexe « Éléments fournis par H
 
 ## Authentification et rôles
 
-- Rôles fixes définis par le cahier des charges : Fondatrice (accès complet), Coordinateur, Agent HAVENA. La matrice rôle→permissions est codée en dur côté app (pas éditable à distance).
-- Firestore ne stocke que la liaison compte↔rôle (collection `users` : uid, email, roleId, actif) — jamais les permissions elles-mêmes.
-- Seule la Fondatrice a accès au menu « Gestion des accès » : elle y consulte les rôles/permissions et y ajoute un administrateur (nouveau compte) en le reliant à un rôle. La création de compte se fait via une instance Firebase secondaire pour ne pas déconnecter la session de la Fondatrice.
-- Après le premier login en ligne, le rôle est mis en cache local (GetStorage) et n'est plus jamais re-fetché automatiquement : uniquement lors d'une synchronisation explicite (cohérent avec le principe de sync explicite du reste de l'app). Utiliser des lectures Firestore ponctuelles (`.get()`), pas de `snapshots()` en écoute continue, pour respecter ce principe.
-- **Ce module n'est pas encore implémenté** (prévu en Phase 2 du plan d'action) — le projet Firebase (`havena-9edff`) est déjà configuré (`flutterfire configure` exécuté, `firebase_core` installé).
+**Implémenté** (`lib/features/auth/`, `lib/features/access_management/`, `lib/core/auth/role_permissions.dart`).
+
+- Rôles fixes définis par le cahier des charges : `AppRole.fondatrice` (accès complet), `AppRole.coordinateur`, `AppRole.agent` (uniquement inspections). La matrice rôle→routes est codée en dur dans `RolePermissions` (jamais éditable à distance).
+- Firestore (collection `users`, doc id = uid Firebase Auth) ne stocke que la liaison compte↔rôle : `email` (string), `fullName` (string), `role` (string, une des valeurs de `AppRole` : `fondatrice`/`coordinateur`/`agent`), `active` (bool), `createdAt` (timestamp), `createdBy` (string, uid du créateur) — jamais les permissions elles-mêmes. Règles de sécurité dans [firestore.rules](firestore.rules) (lecture de son propre doc ou, pour la Fondatrice, de tous ; écriture réservée à la Fondatrice). À déployer avec `firebase deploy --only firestore:rules` (pas fait automatiquement, nécessite `firebase login`).
+- Seule la Fondatrice voit l'onglet « Gestion des accès » (`AccessManagementContent`) : rôles/permissions en lecture seule + liste des comptes + formulaire d'ajout d'administrateur. La création de compte passe par une instance Firebase secondaire (`FirebaseAuthService.createUserWithSecondaryApp`) pour ne jamais déconnecter la session de la Fondatrice.
+- `AuthRepository.login()` (Firebase Auth + fetch Firestore ponctuel) met le résultat en cache local via `AuthSessionCacheService` (GetStorage, clé `auth_session`). Au démarrage, `AuthRepository.tryResumeSession()` relit ce cache **sans appel réseau** (résolu de façon synchrone dans `main()`, avant même `GetMaterialApp`, pour choisir la route de départ : `AppRoutes.login` ou `AppRoutes.dashboard`). Le rôle n'est jamais re-fetché automatiquement : uniquement via `AuthRepository.refreshSessionFromRemote()`, à appeler lors d'une synchronisation explicite. Toujours utiliser des lectures Firestore ponctuelles (`.get()`), jamais `.snapshots()`.
+- Filtrage : `SidebarMenu` n'affiche que les sections accessibles au rôle courant (`SessionController.canAccess`) ; `AppShellView` a un garde-fou qui redirige vers la première route autorisée si `NavigationController.currentRoute` pointe vers une section non permise.
 
 ## Suivi d'avancement
 

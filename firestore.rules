@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Règles Firestore HAVENA.
+// La collection `users` ne contient QUE la liaison compte Firebase Auth <-> rôle
+// (uid, email, fullName, role, active, createdAt, createdBy). Les permissions
+// elles-mêmes sont codées en dur côté app (lib/core/auth/role_permissions.dart),
+// jamais éditables via Firestore.
+//
+// Déploiement : `firebase deploy --only firestore:rules` (nécessite `firebase login`).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function callerDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isFondatrice() {
+      return isSignedIn()
+        && callerDoc().data.role == 'fondatrice'
+        && callerDoc().data.active == true;
+    }
+
+    match /users/{uid} {
+      // Chacun peut lire son propre document (nécessaire au login / à la
+      // synchronisation de session). La Fondatrice peut lire tous les comptes
+      // (écran "Gestion des accès").
+      allow read: if isSignedIn() && (request.auth.uid == uid || isFondatrice());
+
+      // Seule la Fondatrice peut créer, modifier ou désactiver des comptes.
+      // Un utilisateur ne peut jamais modifier son propre rôle.
+      allow create: if isFondatrice();
+      allow update: if isFondatrice() && request.auth.uid != uid;
+      allow delete: if false; // désactiver (active: false) plutôt que supprimer
+    }
+
+    // Toute autre collection future (clients, logements, etc. si elles
+    // migrent un jour vers Firestore) reste fermée par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

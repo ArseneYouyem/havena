@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/views/app_shell_view.dart';
+import 'package:havena/features/access_management/bindings/access_management_binding.dart';
+import 'package:havena/features/auth/bindings/auth_binding.dart';
+import 'package:havena/features/auth/views/login_view.dart';
 import 'package:havena/features/dashboard/bindings/dashboard_binding.dart';
 
 class AppPages {
@@ -8,9 +11,17 @@ class AppPages {
 
   static final routes = <GetPage>[
     GetPage(
+      name: AppRoutes.login,
+      page: () => const LoginView(),
+      binding: AuthBinding(),
+    ),
+    GetPage(
       name: AppRoutes.dashboard,
       page: () => const AppShellView(),
-      binding: DashboardBinding(),
+      bindings: [
+        DashboardBinding(),
+        AccessManagementBinding(),
+      ],
     ),
   ];
 }

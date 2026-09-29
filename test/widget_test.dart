@@ -1,18 +1,56 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get_storage/get_storage.dart';
-
-import 'package:havena/main.dart';
+import 'package:havena/app/routes/app_routes.dart';
+import 'package:havena/core/auth/role_permissions.dart';
+import 'package:havena/core/database/enums.dart';
 
 void main() {
-  testWidgets('HavenApp affiche le tableau de bord au démarrage', (
-    WidgetTester tester,
-  ) async {
-    await GetStorage.init();
+  group('RolePermissions', () {
+    test('la fondatrice a accès à toutes les sections, y compris la gestion des accès', () {
+      expect(
+        RolePermissions.canAccess(AppRole.fondatrice, AppRoutes.accessManagement),
+        isTrue,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.fondatrice, AppRoutes.finances),
+        isTrue,
+      );
+    });
 
-    await tester.pumpWidget(const HavenApp());
-    await tester.pumpAndSettle();
+    test('le coordinateur a accès aux modules métier mais pas à la gestion des accès', () {
+      expect(
+        RolePermissions.canAccess(AppRole.coordinateur, AppRoutes.clients),
+        isTrue,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.coordinateur, AppRoutes.finances),
+        isTrue,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.coordinateur, AppRoutes.accessManagement),
+        isFalse,
+      );
+    });
 
-    expect(find.text('HAVENA'), findsOneWidget);
-    expect(find.text('Tableau de bord'), findsOneWidget);
+    test('l\'agent n\'a accès qu\'aux inspections', () {
+      expect(
+        RolePermissions.canAccess(AppRole.agent, AppRoutes.inspections),
+        isTrue,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.agent, AppRoutes.clients),
+        isFalse,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.agent, AppRoutes.dashboard),
+        isFalse,
+      );
+      expect(RolePermissions.routesFor(AppRole.agent), [AppRoutes.inspections]);
+    });
+
+    test('isFondatrice ne renvoie true que pour le rôle fondatrice', () {
+      expect(RolePermissions.isFondatrice(AppRole.fondatrice), isTrue);
+      expect(RolePermissions.isFondatrice(AppRole.coordinateur), isFalse);
+      expect(RolePermissions.isFondatrice(AppRole.agent), isFalse);
+    });
   });
 }

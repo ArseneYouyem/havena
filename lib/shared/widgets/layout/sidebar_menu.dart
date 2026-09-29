@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/controllers/navigation_controller.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 
 class SidebarMenu extends StatelessWidget {
   const SidebarMenu({super.key});
@@ -60,6 +61,11 @@ class SidebarMenu extends StatelessWidget {
       icon: Icons.calendar_month_outlined,
       route: AppRoutes.calendrier,
     ),
+    _MenuItem(
+      label: 'Gestion des accès',
+      icon: Icons.admin_panel_settings_outlined,
+      route: AppRoutes.accessManagement,
+    ),
   ];
 
   @override
@@ -88,9 +94,16 @@ class SidebarMenu extends StatelessWidget {
             child: Obx(() {
               final currentRoute =
                   Get.find<NavigationController>().currentRoute.value;
+              final session = Get.find<SessionController>();
+              final role = session.role;
+              final visibleItems = role == null
+                  ? const <_MenuItem>[]
+                  : _items
+                      .where((item) => session.canAccess(item.route))
+                      .toList();
               return ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                children: _items
+                children: visibleItems
                     .map(
                       (item) => _SidebarMenuItem(
                         item: item,
