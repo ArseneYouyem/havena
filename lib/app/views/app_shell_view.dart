@@ -7,6 +7,7 @@ import 'package:havena/core/auth/role_permissions.dart';
 import 'package:havena/features/abonnements/views/abonnements_view.dart';
 import 'package:havena/features/access_management/views/access_management_view.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/views/calendrier_view.dart';
 import 'package:havena/features/clients/views/clients_view.dart';
 import 'package:havena/features/dashboard/views/dashboard_view.dart';
 import 'package:havena/features/finances/views/finances_view.dart';
@@ -70,7 +71,7 @@ class AppShellView extends GetView<NavigationController> {
       case AppRoutes.rapports:
         return const RapportsContent();
       case AppRoutes.calendrier:
-        return const _PlaceholderContent(title: 'Calendrier');
+        return const CalendrierContent();
       case AppRoutes.accessManagement:
         return const AccessManagementContent();
       default:
