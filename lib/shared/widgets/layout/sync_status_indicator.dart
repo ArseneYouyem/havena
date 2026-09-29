@@ -2,13 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/controllers/sync_controller.dart';
 import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/shared/widgets/layout/sync_conflict_dialog.dart';
 
-/// Indicateur de synchronisation Google Drive dans la topbar (cahier des
-/// charges : « bouton explicite, statuts de sync »). Un clic connecte le
-/// compte Google (première fois) ou lance une synchronisation ; le menu
-/// contextuel permet de se déconnecter.
+/// Indicateur de synchronisation dans la topbar (cahier des charges :
+/// « bouton explicite, statuts de sync »). « Synchroniser maintenant »
+/// couvre toujours les données métier (Firestore) et, si connecté, les
+/// photos (Google Drive) — la connexion Drive reste une action séparée.
 class SyncStatusIndicator extends StatelessWidget {
   const SyncStatusIndicator({super.key});
+
+  Future<void> _syncAndResolveConflicts(SyncController controller) async {
+    await controller.syncNow();
+    while (controller.pendingConflicts.isNotEmpty) {
+      final conflict = controller.pendingConflicts.first;
+      await Get.dialog(
+        SyncConflictDialog(
+          conflict: conflict,
+          onResolve: (resolved) =>
+              controller.resolveClientConflict(conflict, resolved),
+        ),
+        barrierDismissible: false,
+      );
+      // Sécurité anti-boucle infinie si l'utilisateur ferme sans résoudre.
+      if (controller.pendingConflicts.contains(conflict)) {
+        controller.pendingConflicts.remove(conflict);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,27 +38,30 @@ class SyncStatusIndicator extends StatelessWidget {
       final connected = controller.isConnected.value;
       final syncing = controller.isSyncing.value;
       final pending = controller.pendingCount.value;
+      final conflictsCount = controller.pendingConflicts.length;
       final lastSync = controller.lastSyncAt.value;
       final error = controller.error.value;
 
       final label = _labelFor(
-        connected: connected,
         syncing: syncing,
         pending: pending,
+        conflictsCount: conflictsCount,
         lastSync: lastSync,
         error: error,
       );
-      final color = error != null
-          ? AppColors.error
-          : (connected ? AppColors.success : AppColors.textSecondary);
+      final color = error != null || conflictsCount > 0
+          ? AppColors.warning
+          : (lastSync != null ? AppColors.success : AppColors.textSecondary);
 
       return PopupMenuButton<String>(
-        tooltip: 'Synchronisation Google Drive',
+        tooltip: 'Synchronisation',
         onSelected: (value) {
           switch (value) {
-            case 'connect':
             case 'sync':
-              controller.syncNow();
+              _syncAndResolveConflicts(controller);
+              break;
+            case 'connect':
+              controller.connect();
               break;
             case 'disconnect':
               controller.disconnect();
@@ -46,22 +69,18 @@ class SyncStatusIndicator extends StatelessWidget {
           }
         },
         itemBuilder: (context) {
-          if (!connected) {
-            return const [
-              PopupMenuItem(
-                value: 'connect',
-                child: Text('Se connecter à Google Drive'),
-              ),
-            ];
-          }
-          return const [
-            PopupMenuItem(
+          return [
+            const PopupMenuItem(
               value: 'sync',
               child: Text('Synchroniser maintenant'),
             ),
             PopupMenuItem(
-              value: 'disconnect',
-              child: Text('Se déconnecter'),
+              value: connected ? 'disconnect' : 'connect',
+              child: Text(
+                connected
+                    ? 'Se déconnecter de Google Drive'
+                    : 'Se connecter à Google Drive (photos)',
+              ),
             ),
           ];
         },
@@ -76,7 +95,9 @@ class SyncStatusIndicator extends StatelessWidget {
               )
             else
               Icon(
-                connected ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                conflictsCount > 0
+                    ? Icons.warning_amber_outlined
+                    : Icons.cloud_outlined,
                 size: 16,
                 color: color,
               ),
@@ -92,22 +113,22 @@ class SyncStatusIndicator extends StatelessWidget {
   }
 
   String _labelFor({
-    required bool connected,
     required bool syncing,
     required int pending,
+    required int conflictsCount,
     required DateTime? lastSync,
     required String? error,
   }) {
     if (error != null) return error;
     if (syncing) return 'Synchronisation...';
-    if (!connected) return 'Non connecté';
+    if (conflictsCount > 0) return '$conflictsCount conflit(s) à résoudre';
     if (lastSync == null) {
-      return pending > 0 ? '$pending en attente' : 'Connecté';
+      return pending > 0 ? '$pending photo(s) en attente' : 'Non synchronisé';
     }
     final hour = lastSync.hour.toString().padLeft(2, '0');
     final minute = lastSync.minute.toString().padLeft(2, '0');
     if (pending > 0) {
-      return '$pending en attente (sync $hour:$minute)';
+      return '$pending photo(s) en attente (sync $hour:$minute)';
     }
     return 'Synchronisé à $hour:$minute';
   }

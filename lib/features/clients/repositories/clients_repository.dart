@@ -98,4 +98,56 @@ class ClientsRepository {
   }
 
   Future<void> delete(int id) => _dao.softDelete(id);
+
+  Future<Client?> findBySyncId(String syncId) async {
+    final all = await _dao.watchAll().first;
+    for (final client in all) {
+      if (client.syncId == syncId) return client;
+    }
+    return null;
+  }
+
+  /// Crée ou met à jour la ligne locale correspondant à [syncId] à partir
+  /// d'un document Firestore générique (`ClientSyncAdapter.toFirestoreMap`
+  /// pour le format exact). Utilisé uniquement par `SyncEngine` (pull et
+  /// résolution de conflit) — jamais par l'UI.
+  Future<void> upsertFromRemote({
+    required String syncId,
+    required Map<String, dynamic> data,
+  }) async {
+    final existing = await findBySyncId(syncId);
+    final companion = ClientsCompanion(
+      id: existing != null ? Value(existing.id) : const Value.absent(),
+      syncId: Value(syncId),
+      reference: Value(data['reference'] as String),
+      fullName: Value(data['fullName'] as String),
+      phone: Value(data['phone'] as String),
+      whatsapp: Value(data['whatsapp'] as String?),
+      email: Value(data['email'] as String?),
+      country: Value(data['country'] as String),
+      city: Value(data['city'] as String),
+      clientType: Value(data['clientType'] as String),
+      logementReference: Value(data['logementReference'] as String?),
+      subscriptionFormula: Value(data['subscriptionFormula'] as String?),
+      startDate: Value(_parseDate(data['startDate'])),
+      renewalDate: Value(_parseDate(data['renewalDate'])),
+      status: Value(ClientStatus.values.byName(data['status'] as String)),
+      lastContactDate: Value(_parseDate(data['lastContactDate'])),
+      notes: Value(data['notes'] as String?),
+      updatedAt: Value(DateTime.parse(data['updatedAt'] as String)),
+      updatedBy: Value(data['updatedBy'] as String?),
+      isDeleted: Value(data['isDeleted'] as bool? ?? false),
+      syncStatus: const Value(SyncStatus.synced),
+    );
+    if (existing != null) {
+      await _dao.updateOne(companion);
+    } else {
+      await _dao.insertOne(companion);
+    }
+  }
+
+  DateTime? _parseDate(Object? value) {
+    if (value == null) return null;
+    return DateTime.parse(value as String);
+  }
 }
