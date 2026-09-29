@@ -15,6 +15,13 @@ class FinancesDao extends DatabaseAccessor<AppDatabase>
   Future<Finance?> getById(int id) =>
       (select(finances)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = finances.id.count();
+    final query = selectOnly(finances)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(FinancesCompanion companion) =>
       into(finances).insert(companion);
 

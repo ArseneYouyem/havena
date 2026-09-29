@@ -7,6 +7,7 @@ import 'package:havena/features/auth/bindings/auth_binding.dart';
 import 'package:havena/features/auth/views/login_view.dart';
 import 'package:havena/features/clients/bindings/clients_binding.dart';
 import 'package:havena/features/dashboard/bindings/dashboard_binding.dart';
+import 'package:havena/features/finances/bindings/finances_binding.dart';
 import 'package:havena/features/inspections/bindings/inspections_binding.dart';
 import 'package:havena/features/interventions/bindings/interventions_binding.dart';
 import 'package:havena/features/logements/bindings/logements_binding.dart';
@@ -33,6 +34,7 @@ class AppPages {
         PrestatairesBinding(),
         InspectionsBinding(),
         InterventionsBinding(),
+        FinancesBinding(),
       ],
     ),
   ];
