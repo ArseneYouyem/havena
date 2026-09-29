@@ -17,6 +17,11 @@ class PhotosRepository {
     return all.where((p) => p.inspectionId == inspectionId).toList();
   }
 
+  Future<List<Photo>> forIntervention(int interventionId) async {
+    final all = await _dao.watchAll().first;
+    return all.where((p) => p.interventionId == interventionId).toList();
+  }
+
   Future<void> addPhotoFromFile({
     required String sourcePath,
     required String entityReference,

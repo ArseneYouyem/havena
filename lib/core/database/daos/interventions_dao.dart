@@ -17,6 +17,13 @@ class InterventionsDao extends DatabaseAccessor<AppDatabase>
         ..where((t) => t.id.equals(id)))
       .getSingleOrNull();
 
+  Future<int> countAll() async {
+    final countExp = interventions.id.count();
+    final query = selectOnly(interventions)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<int> insertOne(InterventionsCompanion companion) =>
       into(interventions).insert(companion);
 

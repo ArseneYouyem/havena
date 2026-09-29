@@ -10,6 +10,7 @@ import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/views/clients_view.dart';
 import 'package:havena/features/dashboard/views/dashboard_view.dart';
 import 'package:havena/features/inspections/views/inspections_view.dart';
+import 'package:havena/features/interventions/views/interventions_view.dart';
 import 'package:havena/features/logements/views/logements_view.dart';
 import 'package:havena/features/prestataires/views/prestataires_view.dart';
 import 'package:havena/shared/widgets/layout/desktop_shell.dart';
@@ -59,7 +60,7 @@ class AppShellView extends GetView<NavigationController> {
       case AppRoutes.inspections:
         return const InspectionsContent();
       case AppRoutes.interventions:
-        return const _PlaceholderContent(title: 'Interventions');
+        return const InterventionsContent();
       case AppRoutes.prestataires:
         return const PrestatairesContent();
       case AppRoutes.finances:

@@ -24,6 +24,9 @@ class ReferenceGeneratorService {
   Future<String> nextInspectionReference() =>
       _next('INS', _db.inspectionsDao.countAll);
 
+  Future<String> nextInterventionReference() =>
+      _next('INT', _db.interventionsDao.countAll);
+
   Future<String> _next(String prefix, Future<int> Function() countAll) async {
     final count = await countAll();
     final sequence = (count + 1).toString().padLeft(6, '0');
