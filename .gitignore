@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Identifiants Google Cloud (OAuth Drive/Sheets/Calendar) — jamais commités
+google_drive_credentials.json
+google_drive_token_cache.json
+
 # Symbolication related
 app.*.symbols
 
