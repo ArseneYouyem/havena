@@ -12,6 +12,7 @@ class AppRoutes {
   static const String prestataires = '/prestataires';
   static const String finances = '/finances';
   static const String rapports = '/rapports';
+  static const String documents = '/documents';
   static const String calendrier = '/calendrier';
   static const String accessManagement = '/access-management';
 }

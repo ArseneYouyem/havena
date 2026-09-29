@@ -15,6 +15,7 @@ class RolePermissions {
       AppRoutes.prestataires,
       AppRoutes.finances,
       AppRoutes.rapports,
+      AppRoutes.documents,
       AppRoutes.calendrier,
       AppRoutes.accessManagement,
     },
@@ -28,6 +29,7 @@ class RolePermissions {
       AppRoutes.prestataires,
       AppRoutes.finances,
       AppRoutes.rapports,
+      AppRoutes.documents,
       AppRoutes.calendrier,
     },
     AppRole.agent: {
@@ -55,6 +57,7 @@ class RolePermissions {
       AppRoutes.prestataires,
       AppRoutes.finances,
       AppRoutes.rapports,
+      AppRoutes.documents,
       AppRoutes.calendrier,
       AppRoutes.accessManagement,
     ];

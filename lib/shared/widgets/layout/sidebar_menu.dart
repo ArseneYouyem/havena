@@ -57,6 +57,11 @@ class SidebarMenu extends StatelessWidget {
       route: AppRoutes.rapports,
     ),
     _MenuItem(
+      label: 'Documents',
+      icon: Icons.description_outlined,
+      route: AppRoutes.documents,
+    ),
+    _MenuItem(
       label: 'Calendrier',
       icon: Icons.calendar_month_outlined,
       route: AppRoutes.calendrier,
