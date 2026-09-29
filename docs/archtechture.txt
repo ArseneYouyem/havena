@@ -1,0 +1,241 @@
+ARCHITECTURE ET FONCTIONNEMENT DU LOGICIEL HAVENA
+
+Voici l’architecture pour le système informatique de HAVENA.
+
+L’idée principale est que le logiciel soit le centre de contrôle de HAVENA, tandis que Google Drive serve de stockage, de sauvegarde et de synchronisation.
+
+1. 🖥️ Le logiciel HAVENA
+
+Le logiciel sera installé sur les ordinateurs de :
+
+- la coordinatrice ;
+- l’agent HAVENA ;
+- éventuellement la direction/fondatrice.
+
+Le logiciel devra fonctionner prioritairement en mode hors connexion (offline).
+
+Ainsi, même en cas de coupure Internet, l’utilisateur doit pouvoir continuer à travailler normalement :
+
+- consulter les données ;
+- enregistrer des informations ;
+- créer ou modifier des fiches ;
+- enregistrer des inspections ;
+- enregistrer des interventions ;
+- ajouter des observations ;
+- travailler sur les dossiers existants.
+
+Les données sont d’abord enregistrées localement sur l’ordinateur.
+
+---
+
+2. 🔄 Synchronisation avec Google Drive
+
+Le logiciel devra disposer d’un bouton clairement visible :
+
+☁️ SYNCHRONISER AVEC DRIVE
+
+Lorsque la connexion Internet est disponible, l’utilisateur clique sur ce bouton.
+
+Le système doit alors :
+
+- envoyer les nouvelles données vers Drive ;
+- récupérer les données mises à jour ;
+- synchroniser les clients ;
+- synchroniser les logements ;
+- synchroniser les inspections ;
+- synchroniser les interventions ;
+- synchroniser les prestataires ;
+- synchroniser les rapports ;
+- sauvegarder les documents et photos.
+
+Le principe est donc :
+
+Ordinateur → Synchronisation → Google Drive
+
+et également :
+
+Google Drive → Synchronisation → Ordinateur
+
+Google Drive constitue ainsi le stockage centralisé et la sauvegarde, sans empêcher le logiciel de fonctionner localement hors connexion.
+
+Le logiciel devra également afficher clairement le statut de synchronisation, par exemple :
+
+🟢 Synchronisé
+🟠 Synchronisation en cours
+🔴 Échec de synchronisation
+⚪ Données locales non synchronisées
+
+---
+
+3. 👷 Fonctionnement pour l’agent HAVENA
+
+L’agent travaille également à partir d’un ordinateur.
+
+Il peut accéder à ses différentes fonctions :
+
+Clients → Logements → Inspections → Photos → Anomalies → Rapports
+
+Exemple :
+
+Inspection HAV-DLA-0025
+
+Logement : Bonamoussadi
+
+- Électricité : ✅
+- Plomberie : ⚠️
+- Climatisation : ✅
+- Anomalie : fuite sous évier
+- Photos : 6
+- Recommandation : intervention d’un plombier
+
+L’agent peut enregistrer toutes ces informations sans connexion Internet.
+
+Lorsque la connexion est disponible :
+
+Enregistrer → Synchroniser
+
+---
+
+4. 👩‍💼 Fonctionnement pour la coordinatrice
+
+La coordinatrice travaille également sur ordinateur.
+
+Son interface sera davantage orientée vers la gestion et le suivi des opérations.
+
+Elle doit pouvoir visualiser notamment :
+
+- nouveaux clients ;
+- abonnements actifs ;
+- inspections à effectuer ;
+- interventions en cours ;
+- interventions urgentes ;
+- paiements ;
+- prestataires ;
+- rapports à envoyer.
+
+Elle pourra également créer et modifier :
+
+- clients ;
+- logements ;
+- demandes d’intervention ;
+- prestataires ;
+- rendez-vous ;
+- devis ;
+- paiements ;
+- rapports.
+
+Elle travaille elle aussi hors connexion et synchronise ensuite les données avec Drive.
+
+---
+
+5. 👑 Fonctionnement pour la direction
+
+La direction/fondatrice doit avoir une vue globale de l’activité HAVENA.
+
+Le tableau de bord doit notamment permettre de suivre :
+
+- chiffre d’affaires mensuel ;
+- abonnements actifs ;
+- nombre de clients ;
+- nombre de logements suivis ;
+- interventions ;
+- marges ;
+- prestataires actifs ;
+- inspections réalisées ;
+- incidents ;
+- satisfaction clients.
+
+L’objectif est que le logiciel permette de piloter HAVENA à partir des données réelles de l’entreprise.
+
+---
+
+6. 🔗 Architecture générale
+
+Le fonctionnement souhaité est :
+
+HAVENA
+
+↓
+
+LOGICIEL LOCAL
+(fonctionnement hors connexion)
+
+↓
+
+Agent / Coordinatrice / Direction
+
+↓
+
+Synchronisation
+
+↕️
+
+GOOGLE DRIVE
+(stockage central + sauvegarde + documents/photos/rapports)
+
+---
+
+7. ⚠️ Point très important : gestion des conflits
+
+Il faut prévoir dès la conception un système de gestion des conflits de synchronisation.
+
+Exemple :
+
+L’agent travaille hors connexion et modifie les informations d’un logement.
+
+En même temps, la coordinatrice travaille également hors connexion et modifie ce même logement.
+
+Lorsque les deux ordinateurs se reconnectent et synchronisent leurs données, le logiciel doit être capable de détecter qu’il existe deux versions différentes.
+
+Il ne faut surtout pas qu’une donnée soit simplement écrasée sans contrôle.
+
+Le système devra pouvoir :
+
+- détecter le conflit ;
+- identifier les deux versions ;
+- indiquer qui a effectué chaque modification ;
+- indiquer la date et l’heure ;
+- permettre de choisir la version à conserver ou de fusionner les informations lorsque cela est possible.
+
+Ce point est essentiel et doit être prévu dès le développement de la première version.
+
+---
+
+8. Principe fondamental
+
+Je souhaite que le système fonctionne selon cette logique :
+
+Logiciel HAVENA = outil de travail principal
+
+Google Drive = stockage central, sauvegarde et synchronisation
+
+Le logiciel doit donc être conçu selon une logique offline-first.
+
+Internet sert principalement à :
+
+- synchroniser les données ;
+- sauvegarder ;
+- récupérer les données ;
+- envoyer les rapports ;
+- partager les documents ;
+- effectuer les opérations nécessitant une connexion.
+
+---
+
+9. Résultat attendu
+
+L’objectif final est simple :
+
+Internet coupé → HAVENA continue de fonctionner.
+
+Internet disponible → HAVENA synchronise ses données.
+
+Ordinateur de l’agent → enregistrement des inspections et informations terrain.
+
+Ordinateur de la coordinatrice → gestion et suivi des opérations.
+
+Direction → tableau de bord et contrôle global.
+
+Google Drive → sauvegarde et stockage centralisés.
+
+Cette architecture doit permettre à HAVENA de démarrer avec un système informatique simple, fiable et fonctionnel, sans avoir besoin de développer immédiatement une application mobile.
