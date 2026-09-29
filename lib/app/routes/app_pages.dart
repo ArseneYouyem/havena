@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:havena/app/bindings/reference_search_binding.dart';
+import 'package:havena/app/bindings/sync_binding.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/views/app_shell_view.dart';
 import 'package:havena/features/abonnements/bindings/abonnements_binding.dart';
@@ -43,6 +44,7 @@ class AppPages {
         CalendrierBinding(),
         DocumentsBinding(),
         ReferenceSearchBinding(),
+        SyncBinding(),
       ],
     ),
   ];

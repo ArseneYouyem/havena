@@ -6,6 +6,7 @@ import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/auth/repositories/auth_repository.dart';
 import 'package:havena/shared/widgets/layout/reference_search_field.dart';
 import 'package:havena/shared/widgets/layout/sidebar_menu.dart';
+import 'package:havena/shared/widgets/layout/sync_status_indicator.dart';
 
 class DesktopShell extends StatelessWidget {
   const DesktopShell({
@@ -76,13 +77,7 @@ class _TopBar extends StatelessWidget {
           const SizedBox(width: 32),
           const ReferenceSearchField(),
           const Spacer(),
-          const Text(
-            '⚪ Non synchronisé',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          const SyncStatusIndicator(),
           const SizedBox(width: 20),
           Obx(() {
             final session = Get.find<SessionController>().session.value;

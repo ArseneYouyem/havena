@@ -3,6 +3,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/daos/photos_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/storage/file_storage_service.dart';
+import 'package:havena/core/storage/photo_category.dart';
 
 class PhotosRepository {
   PhotosRepository(this._dao, this._fileStorageService);
@@ -22,6 +23,23 @@ class PhotosRepository {
     return all.where((p) => p.interventionId == interventionId).toList();
   }
 
+  /// Photos jamais envoyées vers Google Drive (`driveFileId` encore vide).
+  Future<List<Photo>> pendingSync() async {
+    final all = await _dao.watchAll().first;
+    return all.where((p) => p.driveFileId == null).toList();
+  }
+
+  Future<void> markSynced({
+    required int id,
+    required String driveFileId,
+  }) async {
+    await _dao.updateOne(PhotosCompanion(
+      id: Value(id),
+      driveFileId: Value(driveFileId),
+      syncStatus: const Value(SyncStatus.synced),
+    ));
+  }
+
   Future<void> addPhotoFromFile({
     required String sourcePath,
     required String logementReference,
@@ -36,7 +54,7 @@ class PhotosRepository {
     final storedPath = await _fileStorageService.copyPhotoToAppStorage(
       sourcePath: sourcePath,
       logementReference: logementReference,
-      categoryFolder: _categoryFolderFor(photoType),
+      categoryFolder: photoCategoryFolder(photoType),
       entityReference: entityReference,
       typeLabel: photoType.name.toUpperCase(),
       sequence: sequence,
@@ -57,20 +75,4 @@ class PhotosRepository {
   }
 
   Future<void> delete(int id) => _dao.softDelete(id);
-
-  /// Dossier PHOTOS par logement, cahier des charges §16.
-  String _categoryFolderFor(PhotoType type) {
-    switch (type) {
-      case PhotoType.etatInitial:
-        return '01 - Etat initial';
-      case PhotoType.inspection:
-        return '02 - Inspections';
-      case PhotoType.avantIntervention:
-        return '04 - Avant';
-      case PhotoType.apresIntervention:
-        return '05 - Apres';
-      case PhotoType.autre:
-        return '06 - Autres';
-    }
-  }
 }
