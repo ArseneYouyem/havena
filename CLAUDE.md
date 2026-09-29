@@ -23,18 +23,20 @@ Le développement se fait **desktop d'abord** (Windows/macOS). L'UI desktop est 
 - State management + navigation : **GetX** (`get`)
 - Stockage local léger (préférences, cache, objets simples) : **GetStorage**
 - Base de données locale principale (métier, relationnelle) : **Drift (SQLite)** — `drift`, `drift_flutter`, `path_provider` (deps), `drift_dev` + `build_runner` (dev deps). Depuis Drift 2.32+/sqlite3 3.x, SQLite est bundlé automatiquement sur toutes les plateformes natives (via native assets) : ne pas ajouter `sqlite3_flutter_libs`, il est obsolète (marqué `+eol`) et inutile.
-- Synchronisation distante : Google Drive, en opération explicite (pas de sync automatique silencieuse imposée)
+- Synchronisation distante : Google Drive, Google Sheets et Google Calendar via les **API Google Cloud Platform** (projet Firebase `havena-9edff`), en opération explicite (pas de sync automatique silencieuse imposée)
+- Authentification et gestion des rôles : **Firebase Auth** (email/mot de passe) + **Cloud Firestore** (liaison compte↔rôle uniquement — voir section « Authentification et rôles »)
 
 ## Règles d'architecture impératives
 
 - Structure **feature-first** sous `lib/` : `app/`, `core/`, `features/<feature>/`, `shared/`.
 - Séparation stricte **vue / controller**. Aucune logique métier dans les vues.
 - Les vues sont des `GetView<XController>` et n'appellent que des méthodes du controller.
-- Les controllers ne touchent jamais directement la base de données ou l'API Drive : ils passent par des `services`/`repositories`.
-- Navigation **centralisée** via `app/routes/` (`AppRoutes`, `AppPages`) — jamais de `Navigator` direct ni de route en dur dans une vue.
+- Les controllers ne touchent jamais directement la base de données, Firestore ou l'API Drive : ils passent par des `services`/`repositories`.
+- Navigation **centralisée** via `app/routes/` (`AppRoutes`, `AppPages`). Sur desktop, un seul `AppShellView` (route unique, montée une fois) héberge en permanence `DesktopShell` (sidebar + topbar fixes) ; le changement d'onglet ne fait PAS un `Get.toNamed` (qui rejouerait toute la page avec une transition) mais met à jour `NavigationController.currentRoute` (Rx), écouté par un `Obx` qui ne change que le contenu central. Ne jamais recréer le shell à chaque navigation. `AppRoutes` reste la source de vérité des identifiants de section même si toutes ne sont pas des `GetPage` séparées.
 - Composants UI réutilisables dans `shared/widgets/` (pas de duplication de composants entre features).
 - Chaque entité métier possède une référence unique au format `HAV-XXX-000001` (voir cahier des charges).
 - La gestion des conflits de synchronisation doit être prévue dès la conception des modèles (champs `updated_at`, `updated_by`, statut de sync).
+- Couleurs : utiliser exclusivement la charte définie dans `AppColors` (voir section « Charte graphique »), jamais de couleur en dur dans une vue.
 
 ## Conventions de nommage
 
@@ -48,6 +50,18 @@ Le développement se fait **desktop d'abord** (Windows/macOS). L'UI desktop est 
 **Drift (SQLite)** a été retenu parmi 3 options (Drift, Isar, sqflite/sqlite3 direct).
 
 Justification : HAVENA est un système fortement relationnel (clients → logements → abonnements → inspections → interventions → prestataires → finances), avec des besoins d'agrégation (tableau de bord, rapports mensuels, CA/marges) qui demandent des jointures SQL. Drift apporte en plus des requêtes réactives (`Stream`) qui s'intègrent naturellement avec les `Rx`/`Obx` de GetX, des migrations gérées et un typage strict. Le schéma vit dans `core/database/` (tables, DAOs, migrations), jamais accédé directement par les controllers — toujours via `repositories`.
+
+## Charte graphique
+
+Charte officielle HAVENA (cahier des charges, annexe « Éléments fournis par HAVENA ») : **Vert `#1E7A4B`**, **Orange `#E8792E`**, **Blanc**. Définie dans `lib/app/theme/app_colors.dart` (`AppColors.primary` = vert, `AppColors.secondary` = orange). Les alertes du tableau de bord (Rouge/Orange/Jaune/Vert, cahier des charges §5) sont dans `AppColors.alertRed/alertOrange/alertYellow/alertGreen`.
+
+## Authentification et rôles
+
+- Rôles fixes définis par le cahier des charges : Fondatrice (accès complet), Coordinateur, Agent HAVENA. La matrice rôle→permissions est codée en dur côté app (pas éditable à distance).
+- Firestore ne stocke que la liaison compte↔rôle (collection `users` : uid, email, roleId, actif) — jamais les permissions elles-mêmes.
+- Seule la Fondatrice a accès au menu « Gestion des accès » : elle y consulte les rôles/permissions et y ajoute un administrateur (nouveau compte) en le reliant à un rôle. La création de compte se fait via une instance Firebase secondaire pour ne pas déconnecter la session de la Fondatrice.
+- Après le premier login en ligne, le rôle est mis en cache local (GetStorage) et n'est plus jamais re-fetché automatiquement : uniquement lors d'une synchronisation explicite (cohérent avec le principe de sync explicite du reste de l'app). Utiliser des lectures Firestore ponctuelles (`.get()`), pas de `snapshots()` en écoute continue, pour respecter ce principe.
+- **Ce module n'est pas encore implémenté** (prévu en Phase 2 du plan d'action) — le projet Firebase (`havena-9edff`) est déjà configuré (`flutterfire configure` exécuté, `firebase_core` installé).
 
 ## Suivi d'avancement
 

@@ -1,0 +1,65 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:havena/app/controllers/navigation_controller.dart';
+import 'package:havena/app/routes/app_routes.dart';
+import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/features/dashboard/views/dashboard_view.dart';
+import 'package:havena/shared/widgets/layout/desktop_shell.dart';
+
+class AppShellView extends GetView<NavigationController> {
+  const AppShellView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DesktopShell(
+      child: Obx(() => _buildContent(controller.currentRoute.value)),
+    );
+  }
+
+  Widget _buildContent(String route) {
+    switch (route) {
+      case AppRoutes.dashboard:
+        return const DashboardContent();
+      case AppRoutes.clients:
+        return const _PlaceholderContent(title: 'Clients');
+      case AppRoutes.logements:
+        return const _PlaceholderContent(title: 'Logements');
+      case AppRoutes.abonnements:
+        return const _PlaceholderContent(title: 'Abonnements');
+      case AppRoutes.inspections:
+        return const _PlaceholderContent(title: 'Inspections');
+      case AppRoutes.interventions:
+        return const _PlaceholderContent(title: 'Interventions');
+      case AppRoutes.prestataires:
+        return const _PlaceholderContent(title: 'Prestataires');
+      case AppRoutes.finances:
+        return const _PlaceholderContent(title: 'Finances');
+      case AppRoutes.rapports:
+        return const _PlaceholderContent(title: 'Rapports');
+      case AppRoutes.calendrier:
+        return const _PlaceholderContent(title: 'Calendrier');
+      default:
+        return const _PlaceholderContent(title: 'HAVENA');
+    }
+  }
+}
+
+class _PlaceholderContent extends StatelessWidget {
+  const _PlaceholderContent({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}

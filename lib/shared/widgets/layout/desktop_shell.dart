@@ -6,12 +6,10 @@ class DesktopShell extends StatelessWidget {
   const DesktopShell({
     super.key,
     required this.child,
-    required this.currentRoute,
     this.title = 'HAVENA',
   });
 
   final Widget child;
-  final String currentRoute;
   final String title;
 
   @override
@@ -20,7 +18,7 @@ class DesktopShell extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Row(
         children: [
-          SidebarMenu(currentRoute: currentRoute),
+          const SidebarMenu(),
           Expanded(
             child: Column(
               children: [

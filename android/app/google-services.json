@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "323802579768",
+    "project_id": "havena-9edff",
+    "storage_bucket": "havena-9edff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:323802579768:android:42912ce04b8b1d5454f7cd",
+        "android_client_info": {
+          "package_name": "com.arsenedev.havena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDc0NYSMST0Wx1-Rk-SmzBOqUxDZTPkyvQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

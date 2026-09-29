@@ -1,61 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/features/dashboard/controllers/dashboard_controller.dart';
-import 'package:havena/shared/widgets/layout/desktop_shell.dart';
 
-class DashboardView extends GetView<DashboardController> {
-  const DashboardView({super.key});
+class DashboardContent extends GetView<DashboardController> {
+  const DashboardContent({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return DesktopShell(
-      currentRoute: AppRoutes.dashboard,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tableau de bord',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Tableau de bord',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            const SizedBox(height: 24),
-            Obx(
-              () => Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  _IndicatorCard(
-                    label: 'Clients',
-                    value: controller.clientsCount.value.toString(),
-                    icon: Icons.people_outline,
-                  ),
-                  _IndicatorCard(
-                    label: 'Logements',
-                    value: controller.logementsCount.value.toString(),
-                    icon: Icons.home_work_outlined,
-                  ),
-                  _IndicatorCard(
-                    label: 'Interventions en cours',
-                    value: controller.interventionsEnCours.value.toString(),
-                    icon: Icons.build_outlined,
-                  ),
-                  _IndicatorCard(
-                    label: 'Abonnements actifs',
-                    value: controller.abonnementsActifs.value.toString(),
-                    icon: Icons.card_membership_outlined,
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 24),
+          Obx(
+            () => Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                _IndicatorCard(
+                  label: 'Clients',
+                  value: controller.clientsCount.value.toString(),
+                  icon: Icons.people_outline,
+                ),
+                _IndicatorCard(
+                  label: 'Logements',
+                  value: controller.logementsCount.value.toString(),
+                  icon: Icons.home_work_outlined,
+                ),
+                _IndicatorCard(
+                  label: 'Interventions en cours',
+                  value: controller.interventionsEnCours.value.toString(),
+                  icon: Icons.build_outlined,
+                ),
+                _IndicatorCard(
+                  label: 'Abonnements actifs',
+                  value: controller.abonnementsActifs.value.toString(),
+                  icon: Icons.card_membership_outlined,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

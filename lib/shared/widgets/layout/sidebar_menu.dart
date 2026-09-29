@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:havena/app/controllers/navigation_controller.dart';
 import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
 
 class SidebarMenu extends StatelessWidget {
-  const SidebarMenu({
-    super.key,
-    required this.currentRoute,
-  });
-
-  final String currentRoute;
+  const SidebarMenu({super.key});
 
   static const double width = 240;
 
@@ -89,17 +85,21 @@ class SidebarMenu extends StatelessWidget {
           ),
           const Divider(height: 1, color: AppColors.border),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: _items
-                  .map(
-                    (item) => _SidebarMenuItem(
-                      item: item,
-                      isActive: currentRoute == item.route,
-                    ),
-                  )
-                  .toList(),
-            ),
+            child: Obx(() {
+              final currentRoute =
+                  Get.find<NavigationController>().currentRoute.value;
+              return ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: _items
+                    .map(
+                      (item) => _SidebarMenuItem(
+                        item: item,
+                        isActive: currentRoute == item.route,
+                      ),
+                    )
+                    .toList(),
+              );
+            }),
           ),
         ],
       ),
@@ -141,7 +141,8 @@ class _SidebarMenuItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => Get.toNamed(item.route),
+          onTap: () =>
+              Get.find<NavigationController>().changeTo(item.route),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
