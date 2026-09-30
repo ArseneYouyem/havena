@@ -1,6 +1,6 @@
-# AGENT.md
+# CLAUDE.md
 
-Ce fichier est le point d'entrée pour tout agent IA (Claude Code) travaillant sur ce dépôt. Il doit être lu avant toute modification. Son contenu est identique à [CLAUDE.md](CLAUDE.md).
+Ce fichier est le point d'entrée pour tout agent IA (Claude Code) travaillant sur ce dépôt. Il doit être lu avant toute modification. Son contenu est identique à [AGENT.md](AGENT.md).
 
 ## Documentation de référence (ne pas dupliquer, toujours consulter la source)
 

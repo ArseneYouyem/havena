@@ -6,7 +6,7 @@ rules_version = '2';
 // elles-mêmes sont codées en dur côté app (lib/core/auth/role_permissions.dart),
 // jamais éditables via Firestore.
 //
-// Déploiement : `firebase deploy --only firestore:rules` (nécessite `firebase login`).
+// Déploiement : `firebase deploy --only firestore:rules --project havena-9edff` (nécessite `firebase login`).
 service cloud.firestore {
   match /databases/{database}/documents {
 
