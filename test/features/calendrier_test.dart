@@ -74,4 +74,51 @@ void main() {
     final events = await repository.watchAll().first;
     expect(events, isEmpty);
   });
+
+  test(
+      'markGoogleSynced associe l\'id Google Calendar sans effacer les '
+      'autres champs', () async {
+    await repository.create(
+      eventType: CalendarEventType.rendezVous,
+      title: 'Visite du logement',
+      eventDate: DateTime(2026, 10, 5, 14, 30),
+      relatedReference: 'HAV-INT-000001',
+      status: CalendarEventStatus.planifie,
+      updatedBy: 'test-uid',
+    );
+    final event = (await repository.watchAll().first).first;
+
+    await repository.markGoogleSynced(
+      id: event.id,
+      googleEventId: 'google-evt-123',
+    );
+
+    final updated = (await repository.watchAll().first).first;
+    expect(updated.googleEventId, 'google-evt-123');
+    expect(updated.title, 'Visite du logement');
+    expect(updated.relatedReference, 'HAV-INT-000001');
+  });
+
+  test('upsertFromRemote reprend googleEventId depuis le document distant',
+      () async {
+    await repository.upsertFromRemote(
+      syncId: 'sync-abc',
+      data: {
+        'eventType': CalendarEventType.rendezVous.name,
+        'title': 'Créé sur un autre appareil',
+        'eventDate': DateTime(2026, 10, 5, 14, 30).toIso8601String(),
+        'relatedReference': null,
+        'responsibleUserId': null,
+        'status': CalendarEventStatus.planifie.name,
+        'updatedAt': DateTime(2026, 10, 5).toIso8601String(),
+        'updatedBy': 'autre-appareil',
+        'isDeleted': false,
+        'googleEventId': 'google-evt-456',
+      },
+    );
+
+    final event = await repository.findBySyncId('sync-abc');
+    expect(event, isNotNull);
+    expect(event!.googleEventId, 'google-evt-456');
+  });
 }

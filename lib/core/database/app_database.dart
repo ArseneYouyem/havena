@@ -73,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'havena'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +113,15 @@ class AppDatabase extends _$AppDatabase {
                 'UPDATE $tableName SET sync_id = lower(hex(randomblob(16))) WHERE sync_id IS NULL',
               );
             }
+          }
+
+          // v2 -> v3 : ajout de `googleEventId` sur Calendrier, pour la
+          // synchronisation vers un calendrier secondaire Google « HAVENA »
+          // (compte Drive partagé de l'entreprise, voir
+          // `GoogleCalendarSyncService`).
+          if (from < 3) {
+            await m.addColumn(
+                calendrierEvenements, calendrierEvenements.googleEventId);
           }
         },
       );

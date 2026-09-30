@@ -2,17 +2,21 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:get/get.dart';
+import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/storage/get_storage_service.dart';
 import 'package:havena/core/storage/photo_category.dart';
 import 'package:googleapis/sheets/v4.dart' as sheets;
+import 'package:havena/core/sync/google_calendar_sync_service.dart';
 import 'package:havena/core/sync/google_drive_auth_service.dart';
 import 'package:havena/core/sync/google_drive_sync_service.dart';
 import 'package:havena/core/sync/entity_sync_adapter.dart';
 import 'package:havena/core/sync/google_sheets_export_service.dart';
 import 'package:havena/core/sync/sync_engine.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
 
@@ -35,18 +39,24 @@ class SyncController extends GetxController {
     required GoogleDriveAuthService authService,
     required GoogleDriveSyncService syncService,
     required GoogleSheetsExportService sheetsExportService,
+    required GoogleCalendarSyncService calendarSyncService,
     required PhotosRepository photosRepository,
     required LogementsRepository logementsRepository,
+    required CalendrierRepository calendrierRepository,
     required GetStorageService storage,
     required SyncEngine syncEngine,
+    required SessionController sessionController,
     required List<EntitySyncAdapter> businessAdapters,
   })  : _authService = authService,
         _syncService = syncService,
         _sheetsExportService = sheetsExportService,
+        _calendarSyncService = calendarSyncService,
         _photosRepository = photosRepository,
         _logementsRepository = logementsRepository,
+        _calendrierRepository = calendrierRepository,
         _storage = storage,
         _syncEngine = syncEngine,
+        _sessionController = sessionController,
         _adaptersByCollection = {
           for (final adapter in businessAdapters)
             adapter.collectionName: adapter,
@@ -55,11 +65,21 @@ class SyncController extends GetxController {
   final GoogleDriveAuthService _authService;
   final GoogleDriveSyncService _syncService;
   final GoogleSheetsExportService _sheetsExportService;
+  final GoogleCalendarSyncService _calendarSyncService;
   final PhotosRepository _photosRepository;
   final LogementsRepository _logementsRepository;
+  final CalendrierRepository _calendrierRepository;
   final GetStorageService _storage;
   final SyncEngine _syncEngine;
+  final SessionController _sessionController;
   final Map<String, EntitySyncAdapter> _adaptersByCollection;
+
+  /// Seule la Fondatrice peut connecter/déconnecter le compte Drive partagé
+  /// de l'entreprise (décision utilisateur) : le reconnecter avec un mauvais
+  /// compte Google écraserait le jeton partagé pour tout le monde. Utilisé
+  /// à la fois pour garder ce garde-fou ici et pour que `SyncStatusIndicator`
+  /// masque les actions correspondantes aux autres rôles.
+  bool get canManageDriveConnection => _sessionController.isFondatrice;
 
   static const String _lastSyncKey = 'google_drive_last_sync_at';
   static const String _lastBusinessSyncKey = 'business_data_last_sync_at';
@@ -109,9 +129,16 @@ class SyncController extends GetxController {
 
   Future<void> connect() async {
     if (isConnected.value) return;
+    if (!canManageDriveConnection) {
+      error.value =
+          'Seule la Fondatrice peut connecter le compte Google de l\'entreprise.';
+      return;
+    }
     error.value = null;
     try {
-      _client = await _authService.connect();
+      _client = await _authService.connect(
+        connectedByUid: _sessionController.session.value!.uid,
+      );
       isConnected.value = true;
     } catch (_) {
       error.value = 'Connexion Google Drive refusée ou annulée.';
@@ -119,6 +146,11 @@ class SyncController extends GetxController {
   }
 
   Future<void> disconnect() async {
+    if (!canManageDriveConnection) {
+      error.value =
+          'Seule la Fondatrice peut déconnecter le compte Google de l\'entreprise.';
+      return;
+    }
     _client?.close();
     _client = null;
     await _authService.disconnect();
@@ -152,6 +184,7 @@ class SyncController extends GetxController {
         if (client != null) {
           await _syncPhotosToDrive(client);
           await _exportSheets(client);
+          await _syncCalendarToGoogle(client);
         }
       }
 
@@ -216,13 +249,30 @@ class SyncController extends GetxController {
   Future<void> _exportSheets(AutoRefreshingAuthClient client) async {
     final driveApi = drive.DriveApi(client);
     final sheetsApi = sheets.SheetsApi(client);
+    final folderId =
+        await _syncService.ensureFolderPath(driveApi, const ['HAVENA']);
     final spreadsheetId = await _sheetsExportService.ensureSpreadsheet(
       sheetsApi,
       driveApi,
+      folderId,
     );
     for (final adapter in _adaptersByCollection.values) {
       await _sheetsExportService.exportEntity(sheetsApi, spreadsheetId, adapter);
     }
+  }
+
+  /// Régénère le calendrier secondaire Google « HAVENA » (créé au premier
+  /// passage, son id mémorisé dans Firestore) et y pousse tous les
+  /// évènements du module Calendrier — création ou mise à jour selon que
+  /// l'évènement a déjà un `googleEventId` (voir `GoogleCalendarSyncService`).
+  Future<void> _syncCalendarToGoogle(AutoRefreshingAuthClient client) async {
+    final api = calendar.CalendarApi(client);
+    final calendarId = await _calendarSyncService.ensureCalendar(api);
+    await _calendarSyncService.syncEvents(
+      api,
+      calendarId,
+      _calendrierRepository,
+    );
   }
 
   /// Applique la résolution d'un conflit métier (choix global ou champ par

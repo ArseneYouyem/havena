@@ -23,6 +23,14 @@ class CalendrierEvenements extends Table {
   /// voir `Clients.syncId`.
   TextColumn get syncId => text().nullable().unique().named('sync_id')();
 
+  /// Id de l'évènement correspondant dans le calendrier secondaire Google
+  /// « HAVENA » du compte Drive partagé de l'entreprise (voir
+  /// `GoogleCalendarSyncService`). Propagé via la synchronisation Firestore
+  /// habituelle (même champ que les autres dans `CalendrierSyncAdapter`)
+  /// pour qu'un appareil qui récupère un évènement créé ailleurs ne
+  /// recrée pas un doublon côté Google Calendar.
+  TextColumn get googleEventId => text().nullable().named('google_event_id')();
+
   DateTimeColumn get updatedAt =>
       dateTime().withDefault(currentDateAndTime).named('updated_at')();
 

@@ -30,6 +30,7 @@ class CalendrierSyncAdapter implements EntitySyncAdapter<CalendrierEvenement> {
         'updatedAt': row.updatedAt.toIso8601String(),
         'updatedBy': row.updatedBy,
         'isDeleted': row.isDeleted,
+        'googleEventId': row.googleEventId,
       };
 
   @override

@@ -20,12 +20,20 @@ import 'package:havena/core/sync/sheet_row_builder.dart';
 class GoogleSheetsExportService {
   static const String _spreadsheetTitle = 'HAVENA';
 
+  /// Retrouve (ou crée) le classeur « HAVENA » **dans** [parentFolderId]
+  /// (le dossier `HAVENA` du Drive, voir `GoogleDriveSyncService`). L'API
+  /// Sheets ne permet pas de spécifier un dossier parent à la création
+  /// (`spreadsheets.create` dépose toujours le fichier à la racine du
+  /// Drive) : on le déplace donc explicitement après coup via l'API Drive
+  /// (`files.update` avec `addParents`/`removeParents`).
   Future<String> ensureSpreadsheet(
     sheets.SheetsApi sheetsApi,
     drive.DriveApi driveApi,
+    String parentFolderId,
   ) async {
     final query = "name = '$_spreadsheetTitle' and "
         "mimeType = 'application/vnd.google-apps.spreadsheet' and "
+        "'$parentFolderId' in parents and "
         'trashed = false';
     final result = await driveApi.files.list(
       q: query,
@@ -42,7 +50,14 @@ class GoogleSheetsExportService {
         properties: sheets.SpreadsheetProperties(title: _spreadsheetTitle),
       ),
     );
-    return created.spreadsheetId!;
+    final spreadsheetId = created.spreadsheetId!;
+    await driveApi.files.update(
+      drive.File(),
+      spreadsheetId,
+      addParents: parentFolderId,
+      removeParents: 'root',
+    );
+    return spreadsheetId;
   }
 
   Future<void> _ensureTab(

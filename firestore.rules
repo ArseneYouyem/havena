@@ -61,6 +61,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Configuration applicative partagée (voir core/sync/,
+    // SharedDriveTokenGateway) : tous les appareils utilisent le même
+    // compte Google (Gmail gratuit de l'entreprise — un compte de service
+    // seul ne peut rien y écrire, ni Drive partagé ni délégation de
+    // domaine ne sont possibles sans Google Workspace). `google_drive_token`
+    // porte le refresh token partagé, sensible : écriture réservée à la
+    // Fondatrice, seule habilitée à connecter/déconnecter ce compte
+    // (décision utilisateur, reconnecter avec le mauvais compte
+    // écraserait le jeton pour tout le monde). `google_calendar` ne porte
+    // que l'id du calendrier secondaire « HAVENA » (non sensible),
+    // n'importe quel appareil actif peut être le premier à le créer lors
+    // d'une synchronisation.
+    match /app_config/{docId} {
+      allow read: if isActiveUser();
+      allow write: if isActiveUser() &&
+        (docId != 'google_drive_token' || isFondatrice());
+    }
+
     // Toute autre collection future reste fermée par défaut.
     match /{document=**} {
       allow read, write: if false;

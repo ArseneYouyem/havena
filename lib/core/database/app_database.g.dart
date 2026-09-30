@@ -11491,6 +11491,17 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
+  static const VerificationMeta _googleEventIdMeta = const VerificationMeta(
+    'googleEventId',
+  );
+  @override
+  late final GeneratedColumn<String> googleEventId = GeneratedColumn<String>(
+    'google_event_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -11551,6 +11562,7 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
     responsibleUserId,
     status,
     syncId,
+    googleEventId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -11609,6 +11621,15 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
       context.handle(
         _syncIdMeta,
         syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta),
+      );
+    }
+    if (data.containsKey('google_event_id')) {
+      context.handle(
+        _googleEventIdMeta,
+        googleEventId.isAcceptableOrUnknown(
+          data['google_event_id']!,
+          _googleEventIdMeta,
+        ),
       );
     }
     if (data.containsKey('updated_at')) {
@@ -11674,6 +11695,10 @@ class $CalendrierEvenementsTable extends CalendrierEvenements
         DriftSqlType.string,
         data['${effectivePrefix}sync_id'],
       ),
+      googleEventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}google_event_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -11725,6 +11750,14 @@ class CalendrierEvenement extends DataClass
   /// Identifiant global unique (UUID) pour la synchronisation Firestore —
   /// voir `Clients.syncId`.
   final String? syncId;
+
+  /// Id de l'évènement correspondant dans le calendrier secondaire Google
+  /// « HAVENA » du compte Drive partagé de l'entreprise (voir
+  /// `GoogleCalendarSyncService`). Propagé via la synchronisation Firestore
+  /// habituelle (même champ que les autres dans `CalendrierSyncAdapter`)
+  /// pour qu'un appareil qui récupère un évènement créé ailleurs ne
+  /// recrée pas un doublon côté Google Calendar.
+  final String? googleEventId;
   final DateTime updatedAt;
   final String? updatedBy;
   final SyncStatus syncStatus;
@@ -11738,6 +11771,7 @@ class CalendrierEvenement extends DataClass
     this.responsibleUserId,
     required this.status,
     this.syncId,
+    this.googleEventId,
     required this.updatedAt,
     this.updatedBy,
     required this.syncStatus,
@@ -11768,6 +11802,9 @@ class CalendrierEvenement extends DataClass
     if (!nullToAbsent || syncId != null) {
       map['sync_id'] = Variable<String>(syncId);
     }
+    if (!nullToAbsent || googleEventId != null) {
+      map['google_event_id'] = Variable<String>(googleEventId);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || updatedBy != null) {
       map['updated_by'] = Variable<String>(updatedBy);
@@ -11797,6 +11834,9 @@ class CalendrierEvenement extends DataClass
       syncId: syncId == null && nullToAbsent
           ? const Value.absent()
           : Value(syncId),
+      googleEventId: googleEventId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(googleEventId),
       updatedAt: Value(updatedAt),
       updatedBy: updatedBy == null && nullToAbsent
           ? const Value.absent()
@@ -11824,6 +11864,7 @@ class CalendrierEvenement extends DataClass
         serializer.fromJson<String>(json['status']),
       ),
       syncId: serializer.fromJson<String?>(json['syncId']),
+      googleEventId: serializer.fromJson<String?>(json['googleEventId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       updatedBy: serializer.fromJson<String?>(json['updatedBy']),
       syncStatus: $CalendrierEvenementsTable.$convertersyncStatus.fromJson(
@@ -11848,6 +11889,7 @@ class CalendrierEvenement extends DataClass
         $CalendrierEvenementsTable.$converterstatus.toJson(status),
       ),
       'syncId': serializer.toJson<String?>(syncId),
+      'googleEventId': serializer.toJson<String?>(googleEventId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'updatedBy': serializer.toJson<String?>(updatedBy),
       'syncStatus': serializer.toJson<String>(
@@ -11866,6 +11908,7 @@ class CalendrierEvenement extends DataClass
     Value<int?> responsibleUserId = const Value.absent(),
     CalendarEventStatus? status,
     Value<String?> syncId = const Value.absent(),
+    Value<String?> googleEventId = const Value.absent(),
     DateTime? updatedAt,
     Value<String?> updatedBy = const Value.absent(),
     SyncStatus? syncStatus,
@@ -11883,6 +11926,9 @@ class CalendrierEvenement extends DataClass
         : this.responsibleUserId,
     status: status ?? this.status,
     syncId: syncId.present ? syncId.value : this.syncId,
+    googleEventId: googleEventId.present
+        ? googleEventId.value
+        : this.googleEventId,
     updatedAt: updatedAt ?? this.updatedAt,
     updatedBy: updatedBy.present ? updatedBy.value : this.updatedBy,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -11902,6 +11948,9 @@ class CalendrierEvenement extends DataClass
           : this.responsibleUserId,
       status: data.status.present ? data.status.value : this.status,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      googleEventId: data.googleEventId.present
+          ? data.googleEventId.value
+          : this.googleEventId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       updatedBy: data.updatedBy.present ? data.updatedBy.value : this.updatedBy,
       syncStatus: data.syncStatus.present
@@ -11922,6 +11971,7 @@ class CalendrierEvenement extends DataClass
           ..write('responsibleUserId: $responsibleUserId, ')
           ..write('status: $status, ')
           ..write('syncId: $syncId, ')
+          ..write('googleEventId: $googleEventId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -11940,6 +11990,7 @@ class CalendrierEvenement extends DataClass
     responsibleUserId,
     status,
     syncId,
+    googleEventId,
     updatedAt,
     updatedBy,
     syncStatus,
@@ -11957,6 +12008,7 @@ class CalendrierEvenement extends DataClass
           other.responsibleUserId == this.responsibleUserId &&
           other.status == this.status &&
           other.syncId == this.syncId &&
+          other.googleEventId == this.googleEventId &&
           other.updatedAt == this.updatedAt &&
           other.updatedBy == this.updatedBy &&
           other.syncStatus == this.syncStatus &&
@@ -11973,6 +12025,7 @@ class CalendrierEvenementsCompanion
   final Value<int?> responsibleUserId;
   final Value<CalendarEventStatus> status;
   final Value<String?> syncId;
+  final Value<String?> googleEventId;
   final Value<DateTime> updatedAt;
   final Value<String?> updatedBy;
   final Value<SyncStatus> syncStatus;
@@ -11986,6 +12039,7 @@ class CalendrierEvenementsCompanion
     this.responsibleUserId = const Value.absent(),
     this.status = const Value.absent(),
     this.syncId = const Value.absent(),
+    this.googleEventId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -12000,6 +12054,7 @@ class CalendrierEvenementsCompanion
     this.responsibleUserId = const Value.absent(),
     required CalendarEventStatus status,
     this.syncId = const Value.absent(),
+    this.googleEventId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.updatedBy = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -12017,6 +12072,7 @@ class CalendrierEvenementsCompanion
     Expression<int>? responsibleUserId,
     Expression<String>? status,
     Expression<String>? syncId,
+    Expression<String>? googleEventId,
     Expression<DateTime>? updatedAt,
     Expression<String>? updatedBy,
     Expression<String>? syncStatus,
@@ -12031,6 +12087,7 @@ class CalendrierEvenementsCompanion
       if (responsibleUserId != null) 'responsible_user_id': responsibleUserId,
       if (status != null) 'status': status,
       if (syncId != null) 'sync_id': syncId,
+      if (googleEventId != null) 'google_event_id': googleEventId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (updatedBy != null) 'updated_by': updatedBy,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -12047,6 +12104,7 @@ class CalendrierEvenementsCompanion
     Value<int?>? responsibleUserId,
     Value<CalendarEventStatus>? status,
     Value<String?>? syncId,
+    Value<String?>? googleEventId,
     Value<DateTime>? updatedAt,
     Value<String?>? updatedBy,
     Value<SyncStatus>? syncStatus,
@@ -12061,6 +12119,7 @@ class CalendrierEvenementsCompanion
       responsibleUserId: responsibleUserId ?? this.responsibleUserId,
       status: status ?? this.status,
       syncId: syncId ?? this.syncId,
+      googleEventId: googleEventId ?? this.googleEventId,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -12099,6 +12158,9 @@ class CalendrierEvenementsCompanion
     if (syncId.present) {
       map['sync_id'] = Variable<String>(syncId.value);
     }
+    if (googleEventId.present) {
+      map['google_event_id'] = Variable<String>(googleEventId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -12127,6 +12189,7 @@ class CalendrierEvenementsCompanion
           ..write('responsibleUserId: $responsibleUserId, ')
           ..write('status: $status, ')
           ..write('syncId: $syncId, ')
+          ..write('googleEventId: $googleEventId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('updatedBy: $updatedBy, ')
           ..write('syncStatus: $syncStatus, ')
@@ -20423,6 +20486,7 @@ typedef $$CalendrierEvenementsTableCreateCompanionBuilder =
       Value<int?> responsibleUserId,
       required CalendarEventStatus status,
       Value<String?> syncId,
+      Value<String?> googleEventId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -20438,6 +20502,7 @@ typedef $$CalendrierEvenementsTableUpdateCompanionBuilder =
       Value<int?> responsibleUserId,
       Value<CalendarEventStatus> status,
       Value<String?> syncId,
+      Value<String?> googleEventId,
       Value<DateTime> updatedAt,
       Value<String?> updatedBy,
       Value<SyncStatus> syncStatus,
@@ -20496,6 +20561,11 @@ class $$CalendrierEvenementsTableFilterComposer
 
   ColumnFilters<String> get syncId => $composableBuilder(
     column: $table.syncId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get googleEventId => $composableBuilder(
+    column: $table.googleEventId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20570,6 +20640,11 @@ class $$CalendrierEvenementsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get googleEventId => $composableBuilder(
+    column: $table.googleEventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -20627,6 +20702,11 @@ class $$CalendrierEvenementsTableAnnotationComposer
 
   GeneratedColumn<String> get syncId =>
       $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<String> get googleEventId => $composableBuilder(
+    column: $table.googleEventId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -20695,6 +20775,7 @@ class $$CalendrierEvenementsTableTableManager
                 Value<int?> responsibleUserId = const Value.absent(),
                 Value<CalendarEventStatus> status = const Value.absent(),
                 Value<String?> syncId = const Value.absent(),
+                Value<String?> googleEventId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -20708,6 +20789,7 @@ class $$CalendrierEvenementsTableTableManager
                 responsibleUserId: responsibleUserId,
                 status: status,
                 syncId: syncId,
+                googleEventId: googleEventId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,
@@ -20723,6 +20805,7 @@ class $$CalendrierEvenementsTableTableManager
                 Value<int?> responsibleUserId = const Value.absent(),
                 required CalendarEventStatus status,
                 Value<String?> syncId = const Value.absent(),
+                Value<String?> googleEventId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> updatedBy = const Value.absent(),
                 Value<SyncStatus> syncStatus = const Value.absent(),
@@ -20736,6 +20819,7 @@ class $$CalendrierEvenementsTableTableManager
                 responsibleUserId: responsibleUserId,
                 status: status,
                 syncId: syncId,
+                googleEventId: googleEventId,
                 updatedAt: updatedAt,
                 updatedBy: updatedBy,
                 syncStatus: syncStatus,

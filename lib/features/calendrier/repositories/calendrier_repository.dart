@@ -64,6 +64,26 @@ class CalendrierRepository {
 
   Future<void> delete(int id) => _dao.softDelete(id);
 
+  /// Associe l'évènement local à l'évènement créé (ou mis à jour) dans le
+  /// calendrier secondaire Google « HAVENA » (voir `GoogleCalendarSyncService`).
+  /// Touche `updatedAt` pour que ce champ se propage aux autres appareils
+  /// via la synchronisation Firestore habituelle (`CalendrierSyncAdapter`),
+  /// et évite ainsi qu'un autre appareil recrée un doublon côté Google
+  /// Calendar pour le même évènement.
+  Future<void> markGoogleSynced({
+    required int id,
+    required String googleEventId,
+  }) async {
+    await _dao.updatePartial(
+      id,
+      CalendrierEvenementsCompanion(
+        googleEventId: Value(googleEventId),
+        updatedAt: Value(DateTime.now()),
+        syncStatus: const Value(SyncStatus.local),
+      ),
+    );
+  }
+
   Future<CalendrierEvenement?> findBySyncId(String syncId) async {
     final all = await _dao.watchAll().first;
     for (final evenement in all) {
@@ -95,6 +115,7 @@ class CalendrierRepository {
       updatedAt: Value(DateTime.parse(data['updatedAt'] as String)),
       updatedBy: Value(data['updatedBy'] as String?),
       isDeleted: Value(data['isDeleted'] as bool? ?? false),
+      googleEventId: Value(data['googleEventId'] as String?),
       syncStatus: const Value(SyncStatus.synced),
     );
     if (existing != null) {

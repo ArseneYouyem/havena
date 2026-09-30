@@ -74,14 +74,19 @@ class SyncStatusIndicator extends StatelessWidget {
               value: 'sync',
               child: Text('Synchroniser maintenant'),
             ),
-            PopupMenuItem(
-              value: connected ? 'disconnect' : 'connect',
-              child: Text(
-                connected
-                    ? 'Se déconnecter de Google Drive'
-                    : 'Se connecter à Google Drive (photos)',
+            // Seule la Fondatrice peut (re)connecter le compte Google
+            // partagé de l'entreprise : le reconnecter avec un mauvais
+            // compte écraserait le jeton partagé pour tout le monde (voir
+            // `SyncController.canManageDriveConnection`).
+            if (controller.canManageDriveConnection)
+              PopupMenuItem(
+                value: connected ? 'disconnect' : 'connect',
+                child: Text(
+                  connected
+                      ? 'Se déconnecter du compte Google de l\'entreprise'
+                      : 'Connecter le compte Google de l\'entreprise',
+                ),
               ),
-            ),
           ];
         },
         child: Row(

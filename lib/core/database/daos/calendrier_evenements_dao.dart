@@ -23,6 +23,18 @@ class CalendrierEvenementsDao extends DatabaseAccessor<AppDatabase>
   Future<bool> updateOne(CalendrierEvenementsCompanion companion) =>
       update(calendrierEvenements).replace(companion);
 
+  /// Mise à jour partielle (seuls les champs présents dans [companion] sont
+  /// modifiés) — contrairement à [updateOne] (`.replace()`), qui exige que
+  /// toutes les colonnes obligatoires (`title`, `eventDate`) soient
+  /// fournies, même pour ne changer qu'un seul champ technique comme
+  /// `googleEventId` (voir `CalendrierRepository.markGoogleSynced`).
+  Future<int> updatePartial(
+    int id,
+    CalendrierEvenementsCompanion companion,
+  ) =>
+      (update(calendrierEvenements)..where((t) => t.id.equals(id)))
+          .write(companion);
+
   Future<int> softDelete(int id) => (update(calendrierEvenements)
         ..where((t) => t.id.equals(id)))
       .write(const CalendrierEvenementsCompanion(isDeleted: Value(true)));
