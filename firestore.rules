@@ -24,6 +24,10 @@ service cloud.firestore {
         && callerDoc().data.active == true;
     }
 
+    function isActiveUser() {
+      return isSignedIn() && callerDoc().data.active == true;
+    }
+
     match /users/{uid} {
       // Chacun peut lire son propre document (nécessaire au login / à la
       // synchronisation de session). La Fondatrice peut lire tous les comptes
@@ -37,8 +41,27 @@ service cloud.firestore {
       allow delete: if false; // désactiver (active: false) plutôt que supprimer
     }
 
-    // Toute autre collection future (clients, logements, etc. si elles
-    // migrent un jour vers Firestore) reste fermée par défaut.
+    // Collections de synchronisation des données métier (voir
+    // lib/core/sync/ : SyncEngine, EntitySyncAdapter par module). Tout
+    // compte actif peut lire/écrire — le filtrage par rôle (Agent limité
+    // aux inspections, etc.) reste appliqué côté app
+    // (lib/core/auth/role_permissions.dart) : ces règles protègent contre
+    // un client compromis qui contournerait l'UI, pas une reproduction
+    // fine du tableau de permissions par rôle (jugé disproportionné pour
+    // la taille de l'équipe visée — cahier des charges §20). La
+    // suppression de document est bloquée : le modèle est en suppression
+    // douce (`isDeleted`), une vraie suppression Firestore romprait la
+    // synchronisation d'un appareil qui n'a pas encore vu le document.
+    match /{collection}/{docId} {
+      allow read, create, update: if isActiveUser() && collection in [
+        'clients', 'logements', 'abonnements', 'interventions',
+        'prestataires', 'finances', 'rapports', 'inspections',
+        'calendrier_evenements'
+      ];
+      allow delete: if false;
+    }
+
+    // Toute autre collection future reste fermée par défaut.
     match /{document=**} {
       allow read, write: if false;
     }
