@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
+import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/inspections/controllers/inspections_controller.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
+import 'package:havena/features/logements/repositories/logements_repository.dart';
 
 class InspectionsBinding extends Bindings {
   @override
@@ -13,7 +15,8 @@ class InspectionsBinding extends Bindings {
       () => InspectionsRepository(
         db.inspectionsDao,
         db.inspectionItemsDao,
-        Get.find(),
+        Get.find<ReferenceGeneratorService>(),
+        Get.find<LogementsRepository>(),
       ),
     );
     Get.lazyPut<InspectionItemsRepository>(

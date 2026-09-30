@@ -1,8 +1,12 @@
 import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
+import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
+import 'package:havena/features/logements/repositories/logements_repository.dart';
+import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 
 class InterventionsBinding extends Bindings {
   @override
@@ -11,7 +15,10 @@ class InterventionsBinding extends Bindings {
     Get.lazyPut<InterventionsRepository>(
       () => InterventionsRepository(
         db.interventionsDao,
-        Get.find(),
+        Get.find<ReferenceGeneratorService>(),
+        Get.find<ClientsRepository>(),
+        Get.find<LogementsRepository>(),
+        Get.find<PrestatairesRepository>(),
       ),
     );
     // Nécessite que LogementsBinding, ClientsBinding et PrestatairesBinding

@@ -34,10 +34,15 @@ void main() {
         database.logementsDao, referenceGenerator, clientsRepository);
     abonnementsRepository = AbonnementsRepository(database.abonnementsDao,
         referenceGenerator, clientsRepository, logementsRepository);
-    interventionsRepository =
-        InterventionsRepository(database.interventionsDao, referenceGenerator);
     prestatairesRepository =
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
+    interventionsRepository = InterventionsRepository(
+      database.interventionsDao,
+      referenceGenerator,
+      clientsRepository,
+      logementsRepository,
+      prestatairesRepository,
+    );
     financesRepository = FinancesRepository(database.financesDao,
         referenceGenerator, clientsRepository, prestatairesRepository);
     rapportsRepository = RapportsRepository(
@@ -46,6 +51,7 @@ void main() {
       database.inspectionsDao,
       database.inspectionItemsDao,
       referenceGenerator,
+      logementsRepository,
     );
 
     controller = ReferenceSearchController(

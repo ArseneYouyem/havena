@@ -17,6 +17,10 @@ import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/clients/sync/client_sync_adapter.dart';
 import 'package:havena/features/finances/repositories/finances_repository.dart';
 import 'package:havena/features/finances/sync/finance_sync_adapter.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
+import 'package:havena/features/inspections/sync/inspection_sync_adapter.dart';
+import 'package:havena/features/interventions/repositories/interventions_repository.dart';
+import 'package:havena/features/interventions/sync/intervention_sync_adapter.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/logements/sync/logement_sync_adapter.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
@@ -82,6 +86,20 @@ class SyncBinding extends Bindings {
         Get.find<PrestatairesRepository>(),
       ),
     );
+    Get.lazyPut<InterventionSyncAdapter>(
+      () => InterventionSyncAdapter(
+        Get.find<InterventionsRepository>(),
+        Get.find<ClientsRepository>(),
+        Get.find<LogementsRepository>(),
+        Get.find<PrestatairesRepository>(),
+      ),
+    );
+    Get.lazyPut<InspectionSyncAdapter>(
+      () => InspectionSyncAdapter(
+        Get.find<InspectionsRepository>(),
+        Get.find<LogementsRepository>(),
+      ),
+    );
     Get.lazyPut<SyncController>(() => SyncController(
           authService: Get.find<GoogleDriveAuthService>(),
           syncService: Get.find<GoogleDriveSyncService>(),
@@ -100,6 +118,8 @@ class SyncBinding extends Bindings {
             Get.find<RapportSyncAdapter>(),
             Get.find<AbonnementSyncAdapter>(),
             Get.find<FinanceSyncAdapter>(),
+            Get.find<InterventionSyncAdapter>(),
+            Get.find<InspectionSyncAdapter>(),
             Get.find<CalendrierSyncAdapter>(),
           ],
         ));

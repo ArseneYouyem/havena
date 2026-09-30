@@ -6,6 +6,7 @@ import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
+import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 
 void main() {
   late AppDatabase database;
@@ -20,9 +21,14 @@ void main() {
         ClientsRepository(database.clientsDao, referenceGenerator);
     logementsRepository = LogementsRepository(
         database.logementsDao, referenceGenerator, clientsRepository);
+    final prestatairesRepository =
+        PrestatairesRepository(database.prestatairesDao, referenceGenerator);
     interventionsRepository = InterventionsRepository(
       database.interventionsDao,
       referenceGenerator,
+      clientsRepository,
+      logementsRepository,
+      prestatairesRepository,
     );
   });
 

@@ -18,17 +18,18 @@ void main() {
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
     final referenceGenerator = ReferenceGeneratorService(database);
-    inspectionsRepository = InspectionsRepository(
-      database.inspectionsDao,
-      database.inspectionItemsDao,
-      referenceGenerator,
-    );
-    inspectionItemsRepository =
-        InspectionItemsRepository(database.inspectionItemsDao);
     final clientsRepository =
         ClientsRepository(database.clientsDao, referenceGenerator);
     logementsRepository = LogementsRepository(
         database.logementsDao, referenceGenerator, clientsRepository);
+    inspectionsRepository = InspectionsRepository(
+      database.inspectionsDao,
+      database.inspectionItemsDao,
+      referenceGenerator,
+      logementsRepository,
+    );
+    inspectionItemsRepository =
+        InspectionItemsRepository(database.inspectionItemsDao);
   });
 
   tearDown(() async {
