@@ -7,6 +7,7 @@ import 'package:havena/core/sync/google_drive_credentials_loader.dart';
 import 'package:havena/core/sync/google_drive_sync_service.dart';
 import 'package:havena/core/sync/google_drive_token_cache.dart';
 import 'package:havena/core/sync/entity_sync_adapter.dart';
+import 'package:havena/core/sync/google_sheets_export_service.dart';
 import 'package:havena/core/sync/sync_engine.dart';
 import 'package:havena/core/sync/sync_gateway.dart';
 import 'package:havena/features/abonnements/repositories/abonnements_repository.dart';
@@ -49,6 +50,7 @@ class SyncBinding extends Bindings {
       ),
     );
     Get.lazyPut<GoogleDriveSyncService>(() => GoogleDriveSyncService());
+    Get.lazyPut<GoogleSheetsExportService>(() => GoogleSheetsExportService());
     Get.lazyPut<SyncGateway>(() => FirestoreSyncGateway());
     Get.lazyPut<SyncEngine>(() => SyncEngine(Get.find<SyncGateway>()));
     Get.lazyPut<ClientSyncAdapter>(
@@ -103,6 +105,7 @@ class SyncBinding extends Bindings {
     Get.lazyPut<SyncController>(() => SyncController(
           authService: Get.find<GoogleDriveAuthService>(),
           syncService: Get.find<GoogleDriveSyncService>(),
+          sheetsExportService: Get.find<GoogleSheetsExportService>(),
           photosRepository: Get.find<PhotosRepository>(),
           logementsRepository: Get.find<LogementsRepository>(),
           storage: Get.find<GetStorageService>(),

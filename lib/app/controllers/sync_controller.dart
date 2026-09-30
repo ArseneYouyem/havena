@@ -7,9 +7,11 @@ import 'package:googleapis_auth/auth_io.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/storage/get_storage_service.dart';
 import 'package:havena/core/storage/photo_category.dart';
+import 'package:googleapis/sheets/v4.dart' as sheets;
 import 'package:havena/core/sync/google_drive_auth_service.dart';
 import 'package:havena/core/sync/google_drive_sync_service.dart';
 import 'package:havena/core/sync/entity_sync_adapter.dart';
+import 'package:havena/core/sync/google_sheets_export_service.dart';
 import 'package:havena/core/sync/sync_engine.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
@@ -32,6 +34,7 @@ class SyncController extends GetxController {
   SyncController({
     required GoogleDriveAuthService authService,
     required GoogleDriveSyncService syncService,
+    required GoogleSheetsExportService sheetsExportService,
     required PhotosRepository photosRepository,
     required LogementsRepository logementsRepository,
     required GetStorageService storage,
@@ -39,6 +42,7 @@ class SyncController extends GetxController {
     required List<EntitySyncAdapter> businessAdapters,
   })  : _authService = authService,
         _syncService = syncService,
+        _sheetsExportService = sheetsExportService,
         _photosRepository = photosRepository,
         _logementsRepository = logementsRepository,
         _storage = storage,
@@ -50,6 +54,7 @@ class SyncController extends GetxController {
 
   final GoogleDriveAuthService _authService;
   final GoogleDriveSyncService _syncService;
+  final GoogleSheetsExportService _sheetsExportService;
   final PhotosRepository _photosRepository;
   final LogementsRepository _logementsRepository;
   final GetStorageService _storage;
@@ -143,7 +148,11 @@ class SyncController extends GetxController {
       );
 
       if (isConnected.value) {
-        await _syncPhotosToDrive();
+        final client = await _resolveDriveClient();
+        if (client != null) {
+          await _syncPhotosToDrive(client);
+          await _exportSheets(client);
+        }
       }
 
       lastSyncAt.value = DateTime.now();
@@ -155,15 +164,22 @@ class SyncController extends GetxController {
     }
   }
 
-  Future<void> _syncPhotosToDrive() async {
+  /// Résout un client OAuth Drive/Sheets déjà en mémoire, ou le reconstruit
+  /// à partir du refresh token stocké. `null` si la session a expiré
+  /// (auquel cas [isConnected] est désactivé et [error] est renseigné).
+  Future<AutoRefreshingAuthClient?> _resolveDriveClient() async {
     var client = _client;
     client ??= await _authService.getClient();
     if (client == null) {
       isConnected.value = false;
       error.value = 'Session Google Drive expirée, reconnecte-toi.';
-      return;
+      return null;
     }
     _client = client;
+    return client;
+  }
+
+  Future<void> _syncPhotosToDrive(AutoRefreshingAuthClient client) async {
     final api = drive.DriveApi(client);
 
     final logements = await _logementsRepository.watchAll().first;
@@ -191,6 +207,21 @@ class SyncController extends GetxController {
         id: photo.id,
         driveFileId: driveFileId,
       );
+    }
+  }
+
+  /// Régénère la vue tableur Google Sheets (un onglet par module,
+  /// remplacée en entier à chaque synchronisation — lecture seule, jamais
+  /// réinjectée dans l'app).
+  Future<void> _exportSheets(AutoRefreshingAuthClient client) async {
+    final driveApi = drive.DriveApi(client);
+    final sheetsApi = sheets.SheetsApi(client);
+    final spreadsheetId = await _sheetsExportService.ensureSpreadsheet(
+      sheetsApi,
+      driveApi,
+    );
+    for (final adapter in _adaptersByCollection.values) {
+      await _sheetsExportService.exportEntity(sheetsApi, spreadsheetId, adapter);
     }
   }
 
