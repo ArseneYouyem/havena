@@ -16,6 +16,8 @@ class FinancesBinding extends Bindings {
     Get.lazyPut<FinancesRepository>(() => FinancesRepository(
           Get.find<AppDatabase>().financesDao,
           Get.find<ReferenceGeneratorService>(),
+          Get.find<ClientsRepository>(),
+          Get.find<PrestatairesRepository>(),
         ));
     Get.lazyPut<FinancesController>(() => FinancesController(
           Get.find<FinancesRepository>(),

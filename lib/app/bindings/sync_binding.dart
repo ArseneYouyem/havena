@@ -9,10 +9,14 @@ import 'package:havena/core/sync/google_drive_token_cache.dart';
 import 'package:havena/core/sync/entity_sync_adapter.dart';
 import 'package:havena/core/sync/sync_engine.dart';
 import 'package:havena/core/sync/sync_gateway.dart';
+import 'package:havena/features/abonnements/repositories/abonnements_repository.dart';
+import 'package:havena/features/abonnements/sync/abonnement_sync_adapter.dart';
 import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/calendrier/sync/calendrier_sync_adapter.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/clients/sync/client_sync_adapter.dart';
+import 'package:havena/features/finances/repositories/finances_repository.dart';
+import 'package:havena/features/finances/sync/finance_sync_adapter.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/logements/sync/logement_sync_adapter.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
@@ -64,6 +68,20 @@ class SyncBinding extends Bindings {
         Get.find<LogementsRepository>(),
       ),
     );
+    Get.lazyPut<AbonnementSyncAdapter>(
+      () => AbonnementSyncAdapter(
+        Get.find<AbonnementsRepository>(),
+        Get.find<ClientsRepository>(),
+        Get.find<LogementsRepository>(),
+      ),
+    );
+    Get.lazyPut<FinanceSyncAdapter>(
+      () => FinanceSyncAdapter(
+        Get.find<FinancesRepository>(),
+        Get.find<ClientsRepository>(),
+        Get.find<PrestatairesRepository>(),
+      ),
+    );
     Get.lazyPut<SyncController>(() => SyncController(
           authService: Get.find<GoogleDriveAuthService>(),
           syncService: Get.find<GoogleDriveSyncService>(),
@@ -72,14 +90,16 @@ class SyncBinding extends Bindings {
           storage: Get.find<GetStorageService>(),
           syncEngine: Get.find<SyncEngine>(),
           // Ordre important : les parents (Clients, Logements) doivent
-          // être synchronisés avant leurs enfants (Rapports...) pour que
-          // la traduction syncId -> id local trouve déjà le parent lors
-          // du premier pull sur un nouvel appareil.
+          // être synchronisés avant leurs enfants (Rapports, Abonnements,
+          // Finances...) pour que la traduction syncId -> id local trouve
+          // déjà le parent lors du premier pull sur un nouvel appareil.
           businessAdapters: <EntitySyncAdapter>[
             Get.find<ClientSyncAdapter>(),
             Get.find<PrestataireSyncAdapter>(),
             Get.find<LogementSyncAdapter>(),
             Get.find<RapportSyncAdapter>(),
+            Get.find<AbonnementSyncAdapter>(),
+            Get.find<FinanceSyncAdapter>(),
             Get.find<CalendrierSyncAdapter>(),
           ],
         ));

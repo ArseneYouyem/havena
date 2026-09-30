@@ -44,10 +44,10 @@ void main() {
         InterventionsRepository(database.interventionsDao, referenceGenerator);
     prestatairesRepository =
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
-    abonnementsRepository =
-        AbonnementsRepository(database.abonnementsDao, referenceGenerator);
-    financesRepository =
-        FinancesRepository(database.financesDao, referenceGenerator);
+    abonnementsRepository = AbonnementsRepository(database.abonnementsDao,
+        referenceGenerator, clientsRepository, logementsRepository);
+    financesRepository = FinancesRepository(database.financesDao,
+        referenceGenerator, clientsRepository, prestatairesRepository);
     inspectionsRepository = InspectionsRepository(
       database.inspectionsDao,
       database.inspectionItemsDao,

@@ -16,6 +16,8 @@ class AbonnementsBinding extends Bindings {
     Get.lazyPut<AbonnementsRepository>(() => AbonnementsRepository(
           Get.find<AppDatabase>().abonnementsDao,
           Get.find<ReferenceGeneratorService>(),
+          Get.find<ClientsRepository>(),
+          Get.find<LogementsRepository>(),
         ));
     Get.lazyPut<AbonnementsController>(() => AbonnementsController(
           Get.find<AbonnementsRepository>(),

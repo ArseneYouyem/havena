@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
+import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/finances/repositories/finances_repository.dart';
+import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 
 void main() {
   late AppDatabase database;
@@ -11,9 +13,12 @@ void main() {
 
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
+    final referenceGenerator = ReferenceGeneratorService(database);
     repository = FinancesRepository(
       database.financesDao,
-      ReferenceGeneratorService(database),
+      referenceGenerator,
+      ClientsRepository(database.clientsDao, referenceGenerator),
+      PrestatairesRepository(database.prestatairesDao, referenceGenerator),
     );
   });
 
