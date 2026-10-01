@@ -6,6 +6,20 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/finances/controllers/finances_controller.dart';
 
+/// Sépare les milliers d'un montant, comme sur le tableau de bord (retour
+/// utilisateur) — ex. 400000 -> "400 000 FCFA".
+String _formatAmount(double amount) {
+  final rounded = amount.round().abs();
+  final digits = rounded.toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(' ');
+    buffer.write(digits[i]);
+  }
+  final sign = amount < 0 ? '-' : '';
+  return '$sign${buffer.toString()} FCFA';
+}
+
 class FinancesContent extends GetView<FinancesController> {
   const FinancesContent({super.key});
 
@@ -157,7 +171,7 @@ class FinancesContent extends GetView<FinancesController> {
                         ),
                       ),
                       trailing: Text(
-                        '${isEntree ? '+' : '-'}${finance.amount.toStringAsFixed(2)} FCFA',
+                        '${isEntree ? '+' : '-'}${_formatAmount(finance.amount)}',
                         style: TextStyle(
                           color: amountColor,
                           fontWeight: FontWeight.w600,
@@ -366,7 +380,7 @@ class FinancesContent extends GetView<FinancesController> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${value.toStringAsFixed(2)} FCFA',
+                _formatAmount(value),
                 style: TextStyle(
                   color: color,
                   fontSize: 18,
@@ -829,7 +843,7 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${isEntree ? '+' : '-'}${finance.amount.toStringAsFixed(2)} FCFA',
+                    '${isEntree ? '+' : '-'}${_formatAmount(finance.amount)}',
                     style: TextStyle(
                       color: amountColor,
                       fontSize: 18,
