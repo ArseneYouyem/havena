@@ -386,6 +386,11 @@ class InterventionsContent extends GetView<InterventionsController> {
           'Logement : ${controller.logementLabelFor(intervention.logementId)}',
           style: const TextStyle(color: AppColors.textPrimary),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Inspection liée : ${controller.inspectionLabelFor(intervention.inspectionId)}',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
         const SizedBox(height: 16),
         _InterventionTextField(
           label: 'Description du problème',
@@ -1069,9 +1074,13 @@ class _CreateInterventionDialog extends StatefulWidget {
 class _CreateInterventionDialogState extends State<_CreateInterventionDialog> {
   final _problemController = TextEditingController();
   final _categoryController = TextEditingController();
-  final _selectedLogementId = Rxn<int>();
+  final _selectedInspectionId = Rxn<int>();
   final _selectedUrgency = Rxn<UrgencyLevel>(UrgencyLevel.normale);
   final _selectedPrestataireId = Rxn<int>();
+
+  String _formatDate(DateTime d) {
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
 
   @override
   void dispose() {
@@ -1100,24 +1109,33 @@ class _CreateInterventionDialogState extends State<_CreateInterventionDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Obx(() {
-                if (interventionsController.logements.isEmpty) {
+                if (interventionsController.inspections.isEmpty) {
                   return const Text(
-                    'Aucun logement disponible',
+                    'Aucune inspection disponible — créez d\'abord une '
+                    'inspection pour ce logement.',
                     style: TextStyle(color: AppColors.textSecondary),
                   );
                 }
+                final sorted = interventionsController.inspections.toList()
+                  ..sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
                 return DropdownButtonFormField<int>(
-                  initialValue: _selectedLogementId.value,
-                  decoration: _inputDecoration('Logement *'),
-                  items: interventionsController.logements.map((logement) {
+                  initialValue: _selectedInspectionId.value,
+                  decoration: _inputDecoration('Inspection *'),
+                  items: sorted.map((inspection) {
+                    final logementLabel = interventionsController
+                        .logementLabelFor(inspection.logementId);
                     return DropdownMenuItem<int>(
-                      value: logement.id,
-                      child: Text(logement.address),
+                      value: inspection.id,
+                      child: Text(
+                        '${inspection.reference} — $logementLabel — '
+                        '${_formatDate(inspection.inspectionDate)}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
                     setState(() {
-                      _selectedLogementId.value = value;
+                      _selectedInspectionId.value = value;
                     });
                   },
                 );
@@ -1204,15 +1222,15 @@ class _CreateInterventionDialogState extends State<_CreateInterventionDialog> {
         ),
         ElevatedButton(
           onPressed: () async {
-            final logementId = _selectedLogementId.value;
+            final inspectionId = _selectedInspectionId.value;
             final problem = _problemController.text.trim();
             final category = _categoryController.text.trim();
             final urgency = _selectedUrgency.value;
             final prestataireId = _selectedPrestataireId.value;
 
-            if (logementId == null) {
+            if (inspectionId == null) {
               interventionsController.formError.value =
-                  'Veuillez sélectionner un logement.';
+                  'Veuillez sélectionner une inspection.';
               return;
             }
             if (problem.isEmpty) {
@@ -1227,7 +1245,7 @@ class _CreateInterventionDialogState extends State<_CreateInterventionDialog> {
             }
 
             final result = await interventionsController.createIntervention(
-              logementId: logementId,
+              inspectionId: inspectionId,
               problemDescription: problem,
               category: category.isEmpty ? null : category,
               urgencyLevel: urgency,

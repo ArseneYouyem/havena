@@ -55,20 +55,32 @@ void main() {
   group('InterventionSyncAdapter (3 clés étrangères : 2 obligatoires + 1 nullable)',
       () {
     late InterventionsRepository interventionsRepository;
+    late InspectionsRepository inspectionsRepository;
     late InterventionSyncAdapter adapter;
     late InMemorySyncGateway gateway;
     late SyncEngine engine;
 
     setUp(() {
+      inspectionsRepository = InspectionsRepository(
+        database.inspectionsDao,
+        database.inspectionItemsDao,
+        referenceGenerator,
+        logementsRepository,
+      );
       interventionsRepository = InterventionsRepository(
         database.interventionsDao,
         referenceGenerator,
         clientsRepository,
         logementsRepository,
         prestatairesRepository,
+        inspectionsRepository,
       );
-      adapter = InterventionSyncAdapter(interventionsRepository,
-          clientsRepository, logementsRepository, prestatairesRepository);
+      adapter = InterventionSyncAdapter(
+          interventionsRepository,
+          clientsRepository,
+          logementsRepository,
+          prestatairesRepository,
+          inspectionsRepository);
       gateway = InMemorySyncGateway();
       engine = SyncEngine(gateway);
     });

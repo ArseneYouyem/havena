@@ -102,6 +102,7 @@ class SyncBinding extends Bindings {
         Get.find<ClientsRepository>(),
         Get.find<LogementsRepository>(),
         Get.find<PrestatairesRepository>(),
+        Get.find<InspectionsRepository>(),
       ),
     );
     Get.lazyPut<InspectionSyncAdapter>(
@@ -125,6 +126,9 @@ class SyncBinding extends Bindings {
           // être synchronisés avant leurs enfants (Rapports, Abonnements,
           // Finances...) pour que la traduction syncId -> id local trouve
           // déjà le parent lors du premier pull sur un nouvel appareil.
+          // Inspections avant Interventions depuis que ces dernières
+          // portent un `inspectionSyncId` (retour utilisateur : « on ne
+          // fait pas d'intervention sans inspection »).
           businessAdapters: <EntitySyncAdapter>[
             Get.find<ClientSyncAdapter>(),
             Get.find<PrestataireSyncAdapter>(),
@@ -132,8 +136,8 @@ class SyncBinding extends Bindings {
             Get.find<RapportSyncAdapter>(),
             Get.find<AbonnementSyncAdapter>(),
             Get.find<FinanceSyncAdapter>(),
-            Get.find<InterventionSyncAdapter>(),
             Get.find<InspectionSyncAdapter>(),
+            Get.find<InterventionSyncAdapter>(),
             Get.find<CalendrierSyncAdapter>(),
           ],
         ));

@@ -6,6 +6,7 @@ import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/photos/repositories/photos_repository.dart';
@@ -20,13 +21,15 @@ class InterventionsController extends GetxController {
     required PhotosRepository photosRepository,
     required SessionController sessionController,
     required CalendrierRepository calendrierRepository,
+    required InspectionsRepository inspectionsRepository,
   })  : _interventionsRepository = interventionsRepository,
         _logementsRepository = logementsRepository,
         _clientsRepository = clientsRepository,
         _prestatairesRepository = prestatairesRepository,
         _photosRepository = photosRepository,
         _sessionController = sessionController,
-        _calendrierRepository = calendrierRepository;
+        _calendrierRepository = calendrierRepository,
+        _inspectionsRepository = inspectionsRepository;
 
   final InterventionsRepository _interventionsRepository;
   final LogementsRepository _logementsRepository;
@@ -35,6 +38,7 @@ class InterventionsController extends GetxController {
   final PhotosRepository _photosRepository;
   final SessionController _sessionController;
   final CalendrierRepository _calendrierRepository;
+  final InspectionsRepository _inspectionsRepository;
 
   final Rxn<int> selectedInterventionId = Rxn<int>();
   final Rxn<Intervention> selectedIntervention = Rxn<Intervention>();
@@ -42,6 +46,7 @@ class InterventionsController extends GetxController {
   final RxList<Logement> logements = <Logement>[].obs;
   final RxList<Client> clients = <Client>[].obs;
   final RxList<Prestataire> prestataires = <Prestataire>[].obs;
+  final RxList<Inspection> inspections = <Inspection>[].obs;
   final RxList<Photo> beforePhotos = <Photo>[].obs;
   final RxList<Photo> afterPhotos = <Photo>[].obs;
   final RxString searchQuery = ''.obs;
@@ -58,6 +63,7 @@ class InterventionsController extends GetxController {
   StreamSubscription<List<Logement>>? _logementsSub;
   StreamSubscription<List<Client>>? _clientsSub;
   StreamSubscription<List<Prestataire>>? _prestatairesSub;
+  StreamSubscription<List<Inspection>>? _inspectionsSub;
 
   @override
   void onInit() {
@@ -71,6 +77,7 @@ class InterventionsController extends GetxController {
     _logementsSub?.cancel();
     _clientsSub?.cancel();
     _prestatairesSub?.cancel();
+    _inspectionsSub?.cancel();
     super.onClose();
   }
 
@@ -87,6 +94,9 @@ class InterventionsController extends GetxController {
     });
     _prestatairesSub = _prestatairesRepository.watchAll().listen((list) {
       prestataires.assignAll(list);
+    });
+    _inspectionsSub = _inspectionsRepository.watchAll().listen((list) {
+      inspections.assignAll(list);
     });
   }
 
@@ -150,9 +160,30 @@ class InterventionsController extends GetxController {
     return null;
   }
 
+  Inspection? _findInspection(int id) {
+    for (final inspection in inspections) {
+      if (inspection.id == id) return inspection;
+    }
+    return null;
+  }
+
   String logementLabelFor(int id) {
     final logement = _findLogement(id);
     return logement != null ? logement.address : 'Logement introuvable';
+  }
+
+  /// Libellé de l'inspection d'origine affiché dans le détail de
+  /// l'intervention (retour utilisateur : « à partir des détails d'une
+  /// intervention, on doit savoir à quelle inspection elle est liée »).
+  String inspectionLabelFor(int? id) {
+    if (id == null) return 'Aucune';
+    final inspection = _findInspection(id);
+    if (inspection == null) return 'Introuvable';
+    return '${inspection.reference} — ${_formatDate(inspection.inspectionDate)}';
+  }
+
+  String _formatDate(DateTime d) {
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
 
   String clientLabelFor(int id) {
@@ -195,24 +226,34 @@ class InterventionsController extends GetxController {
     return list;
   }
 
+  /// L'inspection remplace désormais le logement comme point d'entrée de la
+  /// création (retour utilisateur : « on ne fait pas d'intervention sans
+  /// inspection ») — le logement (et son client) sont dérivés de
+  /// l'inspection choisie, jamais sélectionnés séparément.
   Future<int?> createIntervention({
-    required int logementId,
+    required int inspectionId,
     required String problemDescription,
     String? category,
     required UrgencyLevel urgencyLevel,
     int? prestataireId,
   }) async {
-    final logement = _findLogement(logementId);
+    final inspection = _findInspection(inspectionId);
+    if (inspection == null) {
+      formError.value = 'L\'inspection sélectionnée est introuvable.';
+      return null;
+    }
+    final logement = _findLogement(inspection.logementId);
     final clientId = logement?.clientId;
     if (clientId == null) {
-      formError.value = 'Le logement sélectionné n\'a pas de client associé.';
+      formError.value = 'Le logement de cette inspection n\'a pas de client associé.';
       return null;
     }
 
     formError.value = null;
     final id = await _interventionsRepository.create(
-      logementId: logementId,
+      logementId: inspection.logementId,
       clientId: clientId,
+      inspectionId: inspectionId,
       problemDescription: problemDescription,
       category: category,
       urgencyLevel: urgencyLevel,

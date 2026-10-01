@@ -4,6 +4,7 @@ import 'package:havena/core/database/daos/interventions_dao.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 import 'package:uuid/uuid.dart';
@@ -15,6 +16,7 @@ class InterventionsRepository {
     this._clientsRepository,
     this._logementsRepository,
     this._prestatairesRepository,
+    this._inspectionsRepository,
   );
 
   final InterventionsDao _dao;
@@ -22,6 +24,7 @@ class InterventionsRepository {
   final ClientsRepository _clientsRepository;
   final LogementsRepository _logementsRepository;
   final PrestatairesRepository _prestatairesRepository;
+  final InspectionsRepository _inspectionsRepository;
 
   Stream<List<Intervention>> watchAll() => _dao.watchAll();
 
@@ -30,6 +33,7 @@ class InterventionsRepository {
   Future<int> create({
     required int logementId,
     required int clientId,
+    int? inspectionId,
     required String problemDescription,
     String? category,
     required UrgencyLevel urgencyLevel,
@@ -43,6 +47,7 @@ class InterventionsRepository {
       syncId: Value(const Uuid().v4()),
       logementId: Value(logementId),
       clientId: Value(clientId),
+      inspectionId: Value(inspectionId),
       problemDescription: Value(problemDescription),
       category: Value(category),
       urgencyLevel: Value(urgencyLevel),
@@ -86,6 +91,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(problemDescription),
         category: Value(category),
         urgencyLevel: Value(urgencyLevel),
@@ -117,6 +123,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -149,6 +156,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -180,6 +188,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -217,6 +226,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -248,6 +258,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -279,6 +290,7 @@ class InterventionsRepository {
         reference: Value(existing.reference),
         logementId: Value(existing.logementId),
         clientId: Value(existing.clientId),
+        inspectionId: Value(existing.inspectionId),
         problemDescription: Value(existing.problemDescription),
         category: Value(existing.category),
         urgencyLevel: Value(existing.urgencyLevel),
@@ -344,6 +356,16 @@ class InterventionsRepository {
       }
     }
 
+    int? localInspectionId;
+    final inspectionSyncId = data['inspectionSyncId'] as String?;
+    if (inspectionSyncId != null) {
+      final inspection =
+          await _inspectionsRepository.findBySyncId(inspectionSyncId);
+      if (inspection != null) {
+        localInspectionId = inspection.id;
+      }
+    }
+
     final existing = await findBySyncId(syncId);
     final companion = InterventionsCompanion(
       id: existing != null ? Value(existing.id) : const Value.absent(),
@@ -351,6 +373,7 @@ class InterventionsRepository {
       reference: Value(data['reference'] as String),
       logementId: Value(logement.id),
       clientId: Value(client.id),
+      inspectionId: Value(localInspectionId),
       problemDescription: Value(data['problemDescription'] as String),
       category: Value(data['category'] as String?),
       urgencyLevel:

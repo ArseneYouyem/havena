@@ -4,6 +4,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
@@ -12,6 +13,7 @@ void main() {
   late AppDatabase database;
   late ClientsRepository clientsRepository;
   late LogementsRepository logementsRepository;
+  late InspectionsRepository inspectionsRepository;
   late InterventionsRepository interventionsRepository;
 
   setUp(() {
@@ -23,12 +25,19 @@ void main() {
         database.logementsDao, referenceGenerator, clientsRepository);
     final prestatairesRepository =
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
+    inspectionsRepository = InspectionsRepository(
+      database.inspectionsDao,
+      database.inspectionItemsDao,
+      referenceGenerator,
+      logementsRepository,
+    );
     interventionsRepository = InterventionsRepository(
       database.interventionsDao,
       referenceGenerator,
       clientsRepository,
       logementsRepository,
       prestatairesRepository,
+      inspectionsRepository,
     );
   });
 
@@ -55,6 +64,38 @@ void main() {
     final logement = (await logementsRepository.watchAll().first).first;
     return (client.id, logement.id);
   }
+
+  test(
+      'persiste et met à jour inspectionId sans le perdre lors d\'une '
+      'modification ultérieure', () async {
+    final (clientId, logementId) = await createClientAndLogement();
+    final inspectionId = await inspectionsRepository.createWithChecklist(
+      logementId: logementId,
+      inspectionDate: DateTime(2026, 9, 5),
+      updatedBy: 'test-uid',
+    );
+
+    final id = await interventionsRepository.create(
+      logementId: logementId,
+      clientId: clientId,
+      inspectionId: inspectionId,
+      problemDescription: 'Fissure détectée pendant l\'inspection',
+      urgencyLevel: UrgencyLevel.normale,
+      updatedBy: 'test-uid',
+    );
+
+    var intervention = await interventionsRepository.getById(id);
+    expect(intervention!.inspectionId, inspectionId);
+
+    // Une mise à jour d'un autre champ ne doit pas effacer le lien.
+    await interventionsRepository.updateStatus(
+      id: id,
+      status: InterventionStatus.planifie,
+      updatedBy: 'test-uid',
+    );
+    intervention = await interventionsRepository.getById(id);
+    expect(intervention!.inspectionId, inspectionId);
+  });
 
   test('crée une intervention avec référence et statut initial', () async {
     final (clientId, logementId) = await createClientAndLogement();

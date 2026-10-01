@@ -1,31 +1,36 @@
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/sync/entity_sync_adapter.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 
 /// Adaptateur de synchronisation Firestore pour les interventions.
-/// Traduit les clés étrangères obligatoires `logementId`/`clientId` et la
-/// clé nullable `prestataireId` en `logementSyncId`/`clientSyncId`/
-/// `prestataireSyncId` (UUID des parents) via des listes en mémoire,
-/// actualisées à chaque appel d'`allLocal()`.
+/// Traduit les clés étrangères obligatoires `logementId`/`clientId` et les
+/// clés nullables `prestataireId`/`inspectionId` en
+/// `logementSyncId`/`clientSyncId`/`prestataireSyncId`/`inspectionSyncId`
+/// (UUID des parents) via des listes en mémoire, actualisées à chaque appel
+/// d'`allLocal()`.
 class InterventionSyncAdapter implements EntitySyncAdapter<Intervention> {
   InterventionSyncAdapter(
     this._repository,
     this._clientsRepository,
     this._logementsRepository,
     this._prestatairesRepository,
+    this._inspectionsRepository,
   );
 
   final InterventionsRepository _repository;
   final ClientsRepository _clientsRepository;
   final LogementsRepository _logementsRepository;
   final PrestatairesRepository _prestatairesRepository;
+  final InspectionsRepository _inspectionsRepository;
 
   List<Client> _cachedClients = [];
   List<Logement> _cachedLogements = [];
   List<Prestataire> _cachedPrestataires = [];
+  List<Inspection> _cachedInspections = [];
 
   @override
   String get collectionName => 'interventions';
@@ -42,6 +47,7 @@ class InterventionSyncAdapter implements EntitySyncAdapter<Intervention> {
     _cachedClients = await _clientsRepository.watchAll().first;
     _cachedLogements = await _logementsRepository.watchAll().first;
     _cachedPrestataires = await _prestatairesRepository.watchAll().first;
+    _cachedInspections = await _inspectionsRepository.watchAll().first;
     return interventions;
   }
 
@@ -73,10 +79,21 @@ class InterventionSyncAdapter implements EntitySyncAdapter<Intervention> {
       }
     }
 
+    String? inspectionSyncId;
+    if (row.inspectionId != null) {
+      for (final inspection in _cachedInspections) {
+        if (inspection.id == row.inspectionId) {
+          inspectionSyncId = inspection.syncId;
+          break;
+        }
+      }
+    }
+
     return {
       'reference': row.reference,
       'logementSyncId': logementSyncId,
       'clientSyncId': clientSyncId,
+      'inspectionSyncId': inspectionSyncId,
       'problemDescription': row.problemDescription,
       'category': row.category,
       'urgencyLevel': row.urgencyLevel.name,

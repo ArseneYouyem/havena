@@ -6,6 +6,7 @@ part of 'interventions_dao.dart';
 mixin _$InterventionsDaoMixin on DatabaseAccessor<AppDatabase> {
   $ClientsTable get clients => attachedDatabase.clients;
   $LogementsTable get logements => attachedDatabase.logements;
+  $InspectionsTable get inspections => attachedDatabase.inspections;
   $PrestatairesTable get prestataires => attachedDatabase.prestataires;
   $InterventionsTable get interventions => attachedDatabase.interventions;
   InterventionsDaoManager get managers => InterventionsDaoManager(this);
@@ -18,6 +19,8 @@ class InterventionsDaoManager {
       $$ClientsTableTableManager(_db.attachedDatabase, _db.clients);
   $$LogementsTableTableManager get logements =>
       $$LogementsTableTableManager(_db.attachedDatabase, _db.logements);
+  $$InspectionsTableTableManager get inspections =>
+      $$InspectionsTableTableManager(_db.attachedDatabase, _db.inspections);
   $$PrestatairesTableTableManager get prestataires =>
       $$PrestatairesTableTableManager(_db.attachedDatabase, _db.prestataires);
   $$InterventionsTableTableManager get interventions =>

@@ -4,6 +4,7 @@ import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
@@ -13,6 +14,11 @@ class InterventionsBinding extends Bindings {
   @override
   void dependencies() {
     final db = Get.find<AppDatabase>();
+    // Nécessite que InspectionsBinding soit également enregistrée sur la
+    // page (résolution paresseuse, voir ClientsBinding) : une intervention
+    // est désormais toujours rattachée à une inspection (retour
+    // utilisateur), qu'il faut pouvoir résoudre côté synchro
+    // (`inspectionSyncId` -> `inspectionId` local).
     Get.lazyPut<InterventionsRepository>(
       () => InterventionsRepository(
         db.interventionsDao,
@@ -20,6 +26,7 @@ class InterventionsBinding extends Bindings {
         Get.find<ClientsRepository>(),
         Get.find<LogementsRepository>(),
         Get.find<PrestatairesRepository>(),
+        Get.find<InspectionsRepository>(),
       ),
     );
     // Nécessite que LogementsBinding, ClientsBinding, PrestatairesBinding et
@@ -36,6 +43,7 @@ class InterventionsBinding extends Bindings {
         photosRepository: Get.find(),
         sessionController: Get.find<SessionController>(),
         calendrierRepository: Get.find<CalendrierRepository>(),
+        inspectionsRepository: Get.find<InspectionsRepository>(),
       ),
     );
   }

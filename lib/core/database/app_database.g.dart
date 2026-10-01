@@ -6779,6 +6779,20 @@ class $InterventionsTable extends Interventions
       'REFERENCES clients (id)',
     ),
   );
+  static const VerificationMeta _inspectionIdMeta = const VerificationMeta(
+    'inspectionId',
+  );
+  @override
+  late final GeneratedColumn<int> inspectionId = GeneratedColumn<int>(
+    'inspection_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES inspections (id)',
+    ),
+  );
   static const VerificationMeta _problemDescriptionMeta =
       const VerificationMeta('problemDescription');
   @override
@@ -6979,6 +6993,7 @@ class $InterventionsTable extends Interventions
     reference,
     logementId,
     clientId,
+    inspectionId,
     problemDescription,
     category,
     urgencyLevel,
@@ -7035,6 +7050,15 @@ class $InterventionsTable extends Interventions
       );
     } else if (isInserting) {
       context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('inspection_id')) {
+      context.handle(
+        _inspectionIdMeta,
+        inspectionId.isAcceptableOrUnknown(
+          data['inspection_id']!,
+          _inspectionIdMeta,
+        ),
+      );
     }
     if (data.containsKey('problem_description')) {
       context.handle(
@@ -7174,6 +7198,10 @@ class $InterventionsTable extends Interventions
         DriftSqlType.int,
         data['${effectivePrefix}client_id'],
       )!,
+      inspectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}inspection_id'],
+      ),
       problemDescription: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}problem_description'],
@@ -7273,6 +7301,14 @@ class Intervention extends DataClass implements Insertable<Intervention> {
   final String reference;
   final int logementId;
   final int clientId;
+
+  /// Inspection à l'origine de l'intervention (retour utilisateur : « on ne
+  /// fait pas d'intervention sans inspection ») — nullable au niveau du
+  /// schéma pour ne pas casser les interventions déjà existantes créées
+  /// avant ce lien (et les enregistrements reçus par synchro d'un appareil
+  /// non encore à jour), mais obligatoire côté UI/`InterventionsController`
+  /// pour toute nouvelle création.
+  final int? inspectionId;
   final String problemDescription;
   final String? category;
   final UrgencyLevel urgencyLevel;
@@ -7298,6 +7334,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     required this.reference,
     required this.logementId,
     required this.clientId,
+    this.inspectionId,
     required this.problemDescription,
     this.category,
     required this.urgencyLevel,
@@ -7323,6 +7360,9 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     map['reference'] = Variable<String>(reference);
     map['logement_id'] = Variable<int>(logementId);
     map['client_id'] = Variable<int>(clientId);
+    if (!nullToAbsent || inspectionId != null) {
+      map['inspection_id'] = Variable<int>(inspectionId);
+    }
     map['problem_description'] = Variable<String>(problemDescription);
     if (!nullToAbsent || category != null) {
       map['category'] = Variable<String>(category);
@@ -7381,6 +7421,9 @@ class Intervention extends DataClass implements Insertable<Intervention> {
       reference: Value(reference),
       logementId: Value(logementId),
       clientId: Value(clientId),
+      inspectionId: inspectionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inspectionId),
       problemDescription: Value(problemDescription),
       category: category == null && nullToAbsent
           ? const Value.absent()
@@ -7431,6 +7474,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
       reference: serializer.fromJson<String>(json['reference']),
       logementId: serializer.fromJson<int>(json['logementId']),
       clientId: serializer.fromJson<int>(json['clientId']),
+      inspectionId: serializer.fromJson<int?>(json['inspectionId']),
       problemDescription: serializer.fromJson<String>(
         json['problemDescription'],
       ),
@@ -7470,6 +7514,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
       'reference': serializer.toJson<String>(reference),
       'logementId': serializer.toJson<int>(logementId),
       'clientId': serializer.toJson<int>(clientId),
+      'inspectionId': serializer.toJson<int?>(inspectionId),
       'problemDescription': serializer.toJson<String>(problemDescription),
       'category': serializer.toJson<String?>(category),
       'urgencyLevel': serializer.toJson<String>(
@@ -7501,6 +7546,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     String? reference,
     int? logementId,
     int? clientId,
+    Value<int?> inspectionId = const Value.absent(),
     String? problemDescription,
     Value<String?> category = const Value.absent(),
     UrgencyLevel? urgencyLevel,
@@ -7523,6 +7569,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     reference: reference ?? this.reference,
     logementId: logementId ?? this.logementId,
     clientId: clientId ?? this.clientId,
+    inspectionId: inspectionId.present ? inspectionId.value : this.inspectionId,
     problemDescription: problemDescription ?? this.problemDescription,
     category: category.present ? category.value : this.category,
     urgencyLevel: urgencyLevel ?? this.urgencyLevel,
@@ -7557,6 +7604,9 @@ class Intervention extends DataClass implements Insertable<Intervention> {
           ? data.logementId.value
           : this.logementId,
       clientId: data.clientId.present ? data.clientId.value : this.clientId,
+      inspectionId: data.inspectionId.present
+          ? data.inspectionId.value
+          : this.inspectionId,
       problemDescription: data.problemDescription.present
           ? data.problemDescription.value
           : this.problemDescription,
@@ -7606,6 +7656,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
           ..write('reference: $reference, ')
           ..write('logementId: $logementId, ')
           ..write('clientId: $clientId, ')
+          ..write('inspectionId: $inspectionId, ')
           ..write('problemDescription: $problemDescription, ')
           ..write('category: $category, ')
           ..write('urgencyLevel: $urgencyLevel, ')
@@ -7633,6 +7684,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
     reference,
     logementId,
     clientId,
+    inspectionId,
     problemDescription,
     category,
     urgencyLevel,
@@ -7659,6 +7711,7 @@ class Intervention extends DataClass implements Insertable<Intervention> {
           other.reference == this.reference &&
           other.logementId == this.logementId &&
           other.clientId == this.clientId &&
+          other.inspectionId == this.inspectionId &&
           other.problemDescription == this.problemDescription &&
           other.category == this.category &&
           other.urgencyLevel == this.urgencyLevel &&
@@ -7683,6 +7736,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
   final Value<String> reference;
   final Value<int> logementId;
   final Value<int> clientId;
+  final Value<int?> inspectionId;
   final Value<String> problemDescription;
   final Value<String?> category;
   final Value<UrgencyLevel> urgencyLevel;
@@ -7705,6 +7759,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     this.reference = const Value.absent(),
     this.logementId = const Value.absent(),
     this.clientId = const Value.absent(),
+    this.inspectionId = const Value.absent(),
     this.problemDescription = const Value.absent(),
     this.category = const Value.absent(),
     this.urgencyLevel = const Value.absent(),
@@ -7728,6 +7783,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     required String reference,
     required int logementId,
     required int clientId,
+    this.inspectionId = const Value.absent(),
     required String problemDescription,
     this.category = const Value.absent(),
     required UrgencyLevel urgencyLevel,
@@ -7756,6 +7812,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     Expression<String>? reference,
     Expression<int>? logementId,
     Expression<int>? clientId,
+    Expression<int>? inspectionId,
     Expression<String>? problemDescription,
     Expression<String>? category,
     Expression<String>? urgencyLevel,
@@ -7779,6 +7836,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
       if (reference != null) 'reference': reference,
       if (logementId != null) 'logement_id': logementId,
       if (clientId != null) 'client_id': clientId,
+      if (inspectionId != null) 'inspection_id': inspectionId,
       if (problemDescription != null) 'problem_description': problemDescription,
       if (category != null) 'category': category,
       if (urgencyLevel != null) 'urgency_level': urgencyLevel,
@@ -7804,6 +7862,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     Value<String>? reference,
     Value<int>? logementId,
     Value<int>? clientId,
+    Value<int?>? inspectionId,
     Value<String>? problemDescription,
     Value<String?>? category,
     Value<UrgencyLevel>? urgencyLevel,
@@ -7827,6 +7886,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
       reference: reference ?? this.reference,
       logementId: logementId ?? this.logementId,
       clientId: clientId ?? this.clientId,
+      inspectionId: inspectionId ?? this.inspectionId,
       problemDescription: problemDescription ?? this.problemDescription,
       category: category ?? this.category,
       urgencyLevel: urgencyLevel ?? this.urgencyLevel,
@@ -7861,6 +7921,9 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
     }
     if (clientId.present) {
       map['client_id'] = Variable<int>(clientId.value);
+    }
+    if (inspectionId.present) {
+      map['inspection_id'] = Variable<int>(inspectionId.value);
     }
     if (problemDescription.present) {
       map['problem_description'] = Variable<String>(problemDescription.value);
@@ -7929,6 +7992,7 @@ class InterventionsCompanion extends UpdateCompanion<Intervention> {
           ..write('reference: $reference, ')
           ..write('logementId: $logementId, ')
           ..write('clientId: $clientId, ')
+          ..write('inspectionId: $inspectionId, ')
           ..write('problemDescription: $problemDescription, ')
           ..write('category: $category, ')
           ..write('urgencyLevel: $urgencyLevel, ')
@@ -15578,6 +15642,24 @@ final class $$InspectionsTableReferences
     );
   }
 
+  static MultiTypedResultKey<$InterventionsTable, List<Intervention>>
+  _interventionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.interventions,
+    aliasName: 'inspections__id__interventions__inspection_id',
+  );
+
+  $$InterventionsTableProcessedTableManager get interventionsRefs {
+    final manager = $$InterventionsTableTableManager(
+      $_db,
+      $_db.interventions,
+    ).filter((f) => f.inspectionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_interventionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$PhotosTable, List<Photo>> _photosRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -15713,6 +15795,31 @@ class $$InspectionsTableFilterComposer
           }) => $$InspectionItemsTableFilterComposer(
             $db: $db,
             $table: $db.inspectionItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> interventionsRefs(
+    Expression<bool> Function($$InterventionsTableFilterComposer f) f,
+  ) {
+    final $$InterventionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.interventions,
+      getReferencedColumn: (t) => t.inspectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InterventionsTableFilterComposer(
+            $db: $db,
+            $table: $db.interventions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -15958,6 +16065,31 @@ class $$InspectionsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> interventionsRefs<T extends Object>(
+    Expression<T> Function($$InterventionsTableAnnotationComposer a) f,
+  ) {
+    final $$InterventionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.interventions,
+      getReferencedColumn: (t) => t.inspectionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InterventionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.interventions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> photosRefs<T extends Object>(
     Expression<T> Function($$PhotosTableAnnotationComposer a) f,
   ) {
@@ -16000,6 +16132,7 @@ class $$InspectionsTableTableManager
           PrefetchHooks Function({
             bool logementId,
             bool inspectionItemsRefs,
+            bool interventionsRefs,
             bool photosRefs,
           })
         > {
@@ -16092,12 +16225,14 @@ class $$InspectionsTableTableManager
               ({
                 logementId = false,
                 inspectionItemsRefs = false,
+                interventionsRefs = false,
                 photosRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (inspectionItemsRefs) db.inspectionItems,
+                    if (interventionsRefs) db.interventions,
                     if (photosRefs) db.photos,
                   ],
                   addJoins:
@@ -16157,6 +16292,27 @@ class $$InspectionsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (interventionsRefs)
+                        await $_getPrefetchedData<
+                          Inspection,
+                          $InspectionsTable,
+                          Intervention
+                        >(
+                          currentTable: table,
+                          referencedTable: $$InspectionsTableReferences
+                              ._interventionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$InspectionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).interventionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.inspectionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (photosRefs)
                         await $_getPrefetchedData<
                           Inspection,
@@ -16201,6 +16357,7 @@ typedef $$InspectionsTableProcessedTableManager =
       PrefetchHooks Function({
         bool logementId,
         bool inspectionItemsRefs,
+        bool interventionsRefs,
         bool photosRefs,
       })
     >;
@@ -17371,6 +17528,7 @@ typedef $$InterventionsTableCreateCompanionBuilder =
       required String reference,
       required int logementId,
       required int clientId,
+      Value<int?> inspectionId,
       required String problemDescription,
       Value<String?> category,
       required UrgencyLevel urgencyLevel,
@@ -17395,6 +17553,7 @@ typedef $$InterventionsTableUpdateCompanionBuilder =
       Value<String> reference,
       Value<int> logementId,
       Value<int> clientId,
+      Value<int?> inspectionId,
       Value<String> problemDescription,
       Value<String?> category,
       Value<UrgencyLevel> urgencyLevel,
@@ -17450,6 +17609,24 @@ final class $$InterventionsTableReferences
       $_db.clients,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_clientIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $InspectionsTable _inspectionIdTable(_$AppDatabase db) => db
+      .inspections
+      .createAlias('interventions__inspection_id__inspections__id');
+
+  $$InspectionsTableProcessedTableManager? get inspectionId {
+    final $_column = $_itemColumn<int>('inspection_id');
+    if ($_column == null) return null;
+    final manager = $$InspectionsTableTableManager(
+      $_db,
+      $_db.inspections,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_inspectionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -17633,6 +17810,29 @@ class $$InterventionsTableFilterComposer
           }) => $$ClientsTableFilterComposer(
             $db: $db,
             $table: $db.clients,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InspectionsTableFilterComposer get inspectionId {
+    final $$InspectionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inspectionId,
+      referencedTable: $db.inspections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InspectionsTableFilterComposer(
+            $db: $db,
+            $table: $db.inspections,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -17836,6 +18036,29 @@ class $$InterventionsTableOrderingComposer
     return composer;
   }
 
+  $$InspectionsTableOrderingComposer get inspectionId {
+    final $$InspectionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inspectionId,
+      referencedTable: $db.inspections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InspectionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.inspections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$PrestatairesTableOrderingComposer get prestataireId {
     final $$PrestatairesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -17991,6 +18214,29 @@ class $$InterventionsTableAnnotationComposer
     return composer;
   }
 
+  $$InspectionsTableAnnotationComposer get inspectionId {
+    final $$InspectionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.inspectionId,
+      referencedTable: $db.inspections,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InspectionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inspections,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   $$PrestatairesTableAnnotationComposer get prestataireId {
     final $$PrestatairesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -18056,6 +18302,7 @@ class $$InterventionsTableTableManager
           PrefetchHooks Function({
             bool logementId,
             bool clientId,
+            bool inspectionId,
             bool prestataireId,
             bool photosRefs,
           })
@@ -18077,6 +18324,7 @@ class $$InterventionsTableTableManager
                 Value<String> reference = const Value.absent(),
                 Value<int> logementId = const Value.absent(),
                 Value<int> clientId = const Value.absent(),
+                Value<int?> inspectionId = const Value.absent(),
                 Value<String> problemDescription = const Value.absent(),
                 Value<String?> category = const Value.absent(),
                 Value<UrgencyLevel> urgencyLevel = const Value.absent(),
@@ -18099,6 +18347,7 @@ class $$InterventionsTableTableManager
                 reference: reference,
                 logementId: logementId,
                 clientId: clientId,
+                inspectionId: inspectionId,
                 problemDescription: problemDescription,
                 category: category,
                 urgencyLevel: urgencyLevel,
@@ -18123,6 +18372,7 @@ class $$InterventionsTableTableManager
                 required String reference,
                 required int logementId,
                 required int clientId,
+                Value<int?> inspectionId = const Value.absent(),
                 required String problemDescription,
                 Value<String?> category = const Value.absent(),
                 required UrgencyLevel urgencyLevel,
@@ -18145,6 +18395,7 @@ class $$InterventionsTableTableManager
                 reference: reference,
                 logementId: logementId,
                 clientId: clientId,
+                inspectionId: inspectionId,
                 problemDescription: problemDescription,
                 category: category,
                 urgencyLevel: urgencyLevel,
@@ -18175,6 +18426,7 @@ class $$InterventionsTableTableManager
               ({
                 logementId = false,
                 clientId = false,
+                inspectionId = false,
                 prestataireId = false,
                 photosRefs = false,
               }) {
@@ -18223,6 +18475,21 @@ class $$InterventionsTableTableManager
                                     referencedColumn:
                                         $$InterventionsTableReferences
                                             ._clientIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (inspectionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.inspectionId,
+                                    referencedTable:
+                                        $$InterventionsTableReferences
+                                            ._inspectionIdTable(db),
+                                    referencedColumn:
+                                        $$InterventionsTableReferences
+                                            ._inspectionIdTable(db)
                                             .id,
                                   )
                                   as T;
@@ -18291,6 +18558,7 @@ typedef $$InterventionsTableProcessedTableManager =
       PrefetchHooks Function({
         bool logementId,
         bool clientId,
+        bool inspectionId,
         bool prestataireId,
         bool photosRefs,
       })

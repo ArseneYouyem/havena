@@ -40,6 +40,7 @@ void main() {
       clientsRepository,
       logementsRepository,
       prestatairesRepository,
+      inspectionsRepository,
     );
 
     controller = LogementsController(

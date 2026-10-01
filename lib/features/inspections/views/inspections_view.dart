@@ -241,6 +241,8 @@ class InspectionsContent extends GetView<InspectionsController> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _buildLogementInfoCard(inspection),
             const SizedBox(height: 20),
             _buildGeneralConditionField(context),
             const SizedBox(height: 24),
@@ -255,6 +257,47 @@ class InspectionsContent extends GetView<InspectionsController> {
         ),
       );
     });
+  }
+
+  /// Logement et date affichés en haut de la fiche (retour utilisateur :
+  /// « ajoute les informations sur le logement et la date d'inspection en
+  /// haut, avant les données d'inspection »).
+  Widget _buildLogementInfoCard(Inspection inspection) {
+    return Card(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.home_work_outlined,
+                size: 18, color: AppColors.secondaryText),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                controller.logementLabelFor(inspection.logementId),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Icon(Icons.event_outlined,
+                size: 18, color: AppColors.secondaryText),
+            const SizedBox(width: 8),
+            Text(
+              _formatDate(inspection.inspectionDate),
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildGeneralConditionField(BuildContext context) {

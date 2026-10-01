@@ -73,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'havena'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -122,6 +122,16 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             await m.addColumn(
                 calendrierEvenements, calendrierEvenements.googleEventId);
+          }
+
+          // v3 -> v4 : lien Interventions -> Inspections (retour
+          // utilisateur : « on ne fait pas d'intervention sans
+          // inspection »). Nullable pour ne pas casser les interventions
+          // déjà existantes (jamais comblé rétroactivement : rien ne
+          // permet de savoir fiablement à quelle inspection une ancienne
+          // intervention se rapportait).
+          if (from < 4) {
+            await m.addColumn(interventions, interventions.inspectionId);
           }
         },
       );

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/database/tables/clients_table.dart';
+import 'package:havena/core/database/tables/inspections_table.dart';
 import 'package:havena/core/database/tables/logements_table.dart';
 import 'package:havena/core/database/tables/prestataires_table.dart';
 
@@ -14,6 +15,17 @@ class Interventions extends Table {
 
   IntColumn get clientId =>
       integer().references(Clients, #id).named('client_id')();
+
+  /// Inspection à l'origine de l'intervention (retour utilisateur : « on ne
+  /// fait pas d'intervention sans inspection ») — nullable au niveau du
+  /// schéma pour ne pas casser les interventions déjà existantes créées
+  /// avant ce lien (et les enregistrements reçus par synchro d'un appareil
+  /// non encore à jour), mais obligatoire côté UI/`InterventionsController`
+  /// pour toute nouvelle création.
+  IntColumn get inspectionId => integer()
+      .nullable()
+      .references(Inspections, #id)
+      .named('inspection_id')();
 
   TextColumn get problemDescription =>
       text().named('problem_description')();

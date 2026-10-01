@@ -124,18 +124,19 @@ void main() {
     final referenceGenerator = ReferenceGeneratorService(database);
     final prestatairesRepository =
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
+    final inspectionsRepository = InspectionsRepository(
+      database.inspectionsDao,
+      database.inspectionItemsDao,
+      referenceGenerator,
+      logementsRepository,
+    );
     final interventionsRepository = InterventionsRepository(
       database.interventionsDao,
       referenceGenerator,
       clientsRepository,
       logementsRepository,
       prestatairesRepository,
-    );
-    final inspectionsRepository = InspectionsRepository(
-      database.inspectionsDao,
-      database.inspectionItemsDao,
-      referenceGenerator,
-      logementsRepository,
+      inspectionsRepository,
     );
     final inspectionItemsRepository =
         InspectionItemsRepository(database.inspectionItemsDao);
