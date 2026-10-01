@@ -116,7 +116,6 @@ class DashboardController extends GetxController {
               i.urgencyLevel == UrgencyLevel.critique &&
               !_interventionTerminees.contains(i.status))
           .length;
-      _recomputeFinanceKpis();
       final notes =
           list.map((i) => i.clientSatisfaction).whereType<int>().toList();
       satisfactionMoyenne.value = notes.isEmpty
@@ -186,13 +185,10 @@ class DashboardController extends GetxController {
   /// Recalcule les 4 indicateurs de la card finances (retour utilisateur :
   /// card dédiée avec son propre sélecteur de mois) à partir du mois
   /// sélectionné — appelé à chaque changement de mois ET à chaque mise à
-  /// jour des flux Finances/Interventions dont ces indicateurs dépendent.
+  /// jour du flux Finances dont ces indicateurs dépendent.
   void _recomputeFinanceKpis() {
     final period = selectedFinanceMonth.value;
     if (period.isEmpty) return;
-    final parts = period.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
 
     // Paiement CONFIRMÉ uniquement (retour utilisateur) : ni en attente, ni
     // annulé.
@@ -211,12 +207,13 @@ class DashboardController extends GetxController {
         .where((f) => f.relatedPrestataireId != null)
         .fold<double>(0, (sum, f) => sum + f.amount);
 
-    margeMensuelle.value = _lastInterventions.where((i) {
-      final date = i.interventionDate;
-      final marge = i.havenaMargin;
-      if (date == null || marge == null) return false;
-      return date.year == year && date.month == month;
-    }).fold<double>(0, (sum, i) => sum + i.havenaMargin!);
+    // Marge = chiffre d'affaires - dépenses, sur le même mois et la même
+    // source (Finances) que les 3 autres cartes (retour utilisateur :
+    // auparavant calculée séparément à partir des interventions, ce qui
+    // donnait des chiffres incohérents entre les cartes du même groupe —
+    // ex. une marge non nulle un mois sans aucune transaction Finances).
+    margeMensuelle.value =
+        chiffreAffairesMensuel.value - depensesMensuelles.value;
   }
 
   /// Regroupe en alertes couleur (Rouge/Orange/Jaune, docs/temp.md — Rouge

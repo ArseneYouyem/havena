@@ -183,8 +183,7 @@ void main() {
     expect(controller.inspectionsRealisees.value, 1);
   });
 
-  test(
-      'margeMensuelle/incidentsOuverts/satisfactionMoyenne dérivés des interventions',
+  test('incidentsOuverts/satisfactionMoyenne dérivés des interventions',
       () async {
     final (clientId, logementId) = await createClientAndLogement();
 
@@ -193,17 +192,6 @@ void main() {
       clientId: clientId,
       problemDescription: 'Fuite majeure',
       urgencyLevel: UrgencyLevel.critique,
-      updatedBy: 'test-uid',
-    );
-    await interventionsRepository.updatePlanning(
-      id: critiqueId,
-      interventionDate: DateTime.now(),
-      updatedBy: 'test-uid',
-    );
-    await interventionsRepository.updateAmounts(
-      id: critiqueId,
-      clientAmount: 100000,
-      prestataireAmount: 60000,
       updatedBy: 'test-uid',
     );
     await interventionsRepository.updateSatisfaction(
@@ -226,10 +214,66 @@ void main() {
     );
 
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(controller.margeMensuelle.value, 40000);
     // Une seule critique encore ouverte : la seconde est déjà terminée.
     expect(controller.incidentsOuverts.value, 1);
     expect(controller.satisfactionMoyenne.value, 4.0);
+  });
+
+  test(
+      'margeMensuelle = chiffre d\'affaires - dépenses du mois sélectionné '
+      '(même source que les 3 autres cartes finances, pas les '
+      'interventions)', () async {
+    final now = DateTime.now();
+    final currentPeriod =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+    // Une intervention avec une marge interne (clientAmount -
+    // prestataireAmount) ne doit PAS influencer margeMensuelle : seules
+    // les transactions Finances comptent désormais (retour utilisateur,
+    // incohérence corrigée après la mise en avant de la card).
+    final (clientId, logementId) = await createClientAndLogement();
+    final interventionId = await interventionsRepository.create(
+      logementId: logementId,
+      clientId: clientId,
+      problemDescription: 'Sans transaction Finances associée',
+      urgencyLevel: UrgencyLevel.normale,
+      updatedBy: 'test-uid',
+    );
+    await interventionsRepository.updatePlanning(
+      id: interventionId,
+      interventionDate: now,
+      updatedBy: 'test-uid',
+    );
+    await interventionsRepository.updateAmounts(
+      id: interventionId,
+      clientAmount: 100000,
+      prestataireAmount: 60000,
+      updatedBy: 'test-uid',
+    );
+
+    await financesRepository.create(
+      transactionDate: now,
+      transactionType: TransactionType.entree,
+      description: 'Chiffre d\'affaires du mois',
+      amount: 400000,
+      status: TransactionStatus.valide,
+      periodMonth: currentPeriod,
+      updatedBy: 'test-uid',
+    );
+    await financesRepository.create(
+      transactionDate: now,
+      transactionType: TransactionType.sortie,
+      description: 'Dépenses du mois',
+      amount: 150000,
+      status: TransactionStatus.valide,
+      periodMonth: currentPeriod,
+      updatedBy: 'test-uid',
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(controller.chiffreAffairesMensuel.value, 400000);
+    expect(controller.depensesMensuelles.value, 150000);
+    expect(controller.margeMensuelle.value, 250000);
   });
 
   test(
