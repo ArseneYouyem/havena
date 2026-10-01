@@ -65,29 +65,46 @@ class RapportsContent extends GetView<RapportsController> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final rapport = list[index];
+                  final clientLabel =
+                      controller.clientLabelFor(rapport.logementId);
+                  final logementReference =
+                      controller.logementReferenceFor(rapport.logementId);
                   return Card(
+                    elevation: 0,
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: AppColors.primary.withValues(
-                          alpha: 0.1,
+                          alpha: 0.08,
                         ),
                         child: const Icon(
-                          Icons.description,
+                          Icons.description_outlined,
                           color: AppColors.primary,
-                          size: 20,
+                          size: 18,
                         ),
                       ),
                       title: Text(
                         controller.logementLabelFor(rapport.logementId),
-                        style: const TextStyle(color: AppColors.textPrimary),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            rapport.reference,
+                            [
+                              rapport.reference,
+                              if (logementReference.isNotEmpty)
+                                logementReference,
+                              if (clientLabel.isNotEmpty) clientLabel,
+                            ].join(' — '),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -100,9 +117,9 @@ class RapportsContent extends GetView<RapportsController> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.check_circle,
+                                  Icons.check_circle_outline,
                                   color: AppColors.success,
-                                  size: 16,
+                                  size: 14,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
@@ -118,9 +135,8 @@ class RapportsContent extends GetView<RapportsController> {
                             Text(
                               'Dépenses du client : ${rapport.totalExpenses!.toStringAsFixed(0)} FCFA',
                               style: const TextStyle(
-                                color: AppColors.textPrimary,
+                                color: AppColors.textSecondary,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           if (rapport.generatedAt != null)
@@ -148,7 +164,7 @@ class RapportsContent extends GetView<RapportsController> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Icon(Icons.picture_as_pdf),
+                                  : const Icon(Icons.picture_as_pdf_outlined),
                               color: AppColors.primary,
                               onPressed: generating
                                   ? null

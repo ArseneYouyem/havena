@@ -118,6 +118,22 @@ class RapportsController extends GetxController {
     return logement?.address ?? 'Logement introuvable';
   }
 
+  String logementReferenceFor(int? id) {
+    if (id == null) return '';
+    final logement = _firstWhereOrNull(logements, (l) => l.id == id);
+    return logement?.reference ?? '';
+  }
+
+  /// Client du logement (retour utilisateur : affiché sur chaque rapport).
+  String clientLabelFor(int? logementId) {
+    if (logementId == null) return '';
+    final logement = _firstWhereOrNull(logements, (l) => l.id == logementId);
+    if (logement?.clientId == null) return '';
+    final client =
+        _firstWhereOrNull(clients, (c) => c.id == logement!.clientId);
+    return client == null ? '' : '${client.fullName} (${client.reference})';
+  }
+
   /// Rapports du mois sélectionné (retour utilisateur : la page affiche les
   /// rapports mois par mois), recherche texte appliquée en plus.
   List<Rapport> visibleRapports() {
