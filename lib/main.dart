@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/bindings/initial_binding.dart';
 import 'package:havena/app/routes/app_pages.dart';
@@ -21,6 +23,10 @@ Future<void> main() async {
   final initialRoute = hasLocalSession ? AppRoutes.dashboard : AppRoutes.login;
 
   runApp(HavenApp(initialRoute: initialRoute));
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+    await WidgetsBinding.instance.waitUntilFirstFrameRasterized;
+    await const MethodChannel('havena/startup').invokeMethod<void>('ready');
+  }
 }
 
 class HavenApp extends StatelessWidget {

@@ -81,9 +81,8 @@ flutter_launcher_icons:
     background_color: "#FFFFFF"
     theme_color: "#1E7A4B"
 
-# flutter_native_splash ne supporte que Android / iOS / Web (pas macOS, Windows
-# ni Linux). Sur desktop, l'écran de démarrage natif du système n'est donc pas
-# concerné : l'app se lance directement.
+# Android / iOS / Web : génération via flutter_native_splash.
+# macOS / Windows : splash natif dans Runner, basé sur display_icon_and_splash.jpeg.
 flutter_native_splash:
   color: "#FFFFFF"
   image: assets/splash.png

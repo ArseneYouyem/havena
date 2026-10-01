@@ -23,6 +23,8 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  HWND splash_window_ = nullptr;
+
   // The project to run.
   flutter::DartProject project_;
 
