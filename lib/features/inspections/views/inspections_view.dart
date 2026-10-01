@@ -8,8 +8,10 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/inspections/inspection_checklist.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/inspections/controllers/inspections_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InspectionsContent extends GetView<InspectionsController> {
@@ -297,6 +299,11 @@ class InspectionsContent extends GetView<InspectionsController> {
             ),
             const SizedBox(height: 16),
             _buildLogementInfoCard(inspection),
+            const SizedBox(height: 16),
+            GenerateDocumentButton(
+              entityId: inspection.id,
+              kinds: const [DocumentKind.checklistInspection],
+            ),
             const SizedBox(height: 20),
             _buildGeneralConditionField(context),
             const SizedBox(height: 24),

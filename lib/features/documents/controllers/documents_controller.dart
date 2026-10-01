@@ -249,6 +249,16 @@ class DocumentsController extends GetxController {
     }
   }
 
+  /// Génère directement le document d'un type et d'une entité donnés
+  /// (retour utilisateur : un bouton « Générer le document » dans chaque
+  /// drawer de détail, sans passer par les menus déroulants de la page
+  /// Documents).
+  Future<void> generateAndPreviewFor(DocumentKind kind, int entityId) async {
+    selectedKind.value = kind;
+    selectedEntityId.value = entityId;
+    await generateAndPreview();
+  }
+
   Future<Uint8List> _buildBytes() async {
     switch (selectedKind.value) {
       case DocumentKind.ficheClient:

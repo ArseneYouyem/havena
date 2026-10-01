@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/finances/controllers/finances_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 
 /// Sépare les milliers d'un montant, comme sur le tableau de bord (retour
 /// utilisateur) — ex. 400000 -> "400 000 FCFA".
@@ -909,6 +911,11 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          GenerateDocumentButton(
+            entityId: finance.id,
+            kinds: const [DocumentKind.recu],
           ),
           const SizedBox(height: 20),
           Row(

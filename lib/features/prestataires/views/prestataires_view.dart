@@ -4,8 +4,10 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/prestataires/controllers/prestataires_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 
 class PrestatairesContent extends GetView<PrestatairesController> {
   const PrestatairesContent({super.key});
@@ -778,6 +780,11 @@ class _PrestataireDrawerContent extends GetView<PrestatairesController> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            GenerateDocumentButton(
+              entityId: prestataire.id,
+              kinds: const [DocumentKind.fichePrestataire],
             ),
             const SizedBox(height: 20),
             Row(

@@ -5,7 +5,9 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/abonnements/controllers/abonnements_controller.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 
 class AbonnementsContent extends GetView<AbonnementsController> {
   const AbonnementsContent({super.key});
@@ -734,6 +736,11 @@ class _AbonnementDrawerContent extends GetView<AbonnementsController> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          GenerateDocumentButton(
+            entityId: abonnement.id,
+            kinds: const [DocumentKind.contratAbonnement],
           ),
           const SizedBox(height: 20),
           SizedBox(

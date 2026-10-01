@@ -5,7 +5,9 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/clients/controllers/clients_controller.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 
 class ClientsContent extends GetView<ClientsController> {
   const ClientsContent({super.key});
@@ -604,6 +606,11 @@ class _ClientDrawerContent extends GetView<ClientsController> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          GenerateDocumentButton(
+            entityId: client.id,
+            kinds: const [DocumentKind.ficheClient],
           ),
           const SizedBox(height: 16),
           Card(

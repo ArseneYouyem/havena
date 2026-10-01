@@ -7,8 +7,10 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
+import 'package:havena/shared/widgets/generate_document_button.dart';
 import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InterventionsContent extends GetView<InterventionsController> {
@@ -346,6 +348,15 @@ class InterventionsContent extends GetView<InterventionsController> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GenerateDocumentButton(
+              entityId: intervention.id,
+              kinds: const [
+                DocumentKind.ficheIntervention,
+                DocumentKind.devis,
+                DocumentKind.facture,
               ],
             ),
             const SizedBox(height: 20),
