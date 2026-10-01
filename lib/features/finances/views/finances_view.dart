@@ -212,20 +212,30 @@ class FinancesContent extends GetView<FinancesController> {
   /// Bouton de filtre par mois (retour utilisateur) : à l'extrême droite de
   /// la ligne de titre. « Tous les mois » par défaut, sinon limite les
   /// cartes de synthèse ET la liste aux transactions du mois choisi.
+  // `PopupMenuButton<T>` ne peut pas utiliser `null` comme valeur d'un item
+  // sélectionnable : Flutter distingue en interne « menu fermé sans choix »
+  // de « choix = null » via le même canal (`showMenu` renvoie `null` dans
+  // les deux cas), donc `onSelected` n'est jamais appelé pour un item
+  // `value: null` (retour utilisateur : « Tous les mois » restait sans
+  // effet). Valeur sentinelle non-nulle à la place, traduite en `null`
+  // avant d'être écrite dans le controller.
+  static const _allMonthsValue = '__tous_les_mois__';
+
   Widget _buildMonthFilterButton(BuildContext context) {
     return Obx(() {
       final selected = controller.selectedMonth.value;
       final months = controller.availableMonths();
-      return PopupMenuButton<String?>(
+      return PopupMenuButton<String>(
         tooltip: 'Filtrer par mois',
-        onSelected: (value) => controller.selectedMonth.value = value,
+        onSelected: (value) => controller.selectedMonth.value =
+            value == _allMonthsValue ? null : value,
         itemBuilder: (context) => [
-          const PopupMenuItem<String?>(
-            value: null,
+          const PopupMenuItem<String>(
+            value: _allMonthsValue,
             child: Text('Tous les mois'),
           ),
           ...months.map((month) {
-            return PopupMenuItem<String?>(
+            return PopupMenuItem<String>(
               value: month,
               child: Text(_monthLabel(month)),
             );
