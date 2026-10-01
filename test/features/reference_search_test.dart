@@ -165,4 +165,121 @@ void main() {
     await refreshControllerLists();
     expect(controller.search('HAV-INEXISTANT'), isEmpty);
   });
+
+  test(
+      'la recherche par référence retrouve chacun des 8 types d\'entités '
+      '(retour utilisateur : vérifier que ça fonctionne pour toutes les '
+      'références du système, pas seulement Logement/Client)', () async {
+    await clientsRepository.create(
+      fullName: 'Client Toutes Références',
+      phone: '+237600000022',
+      country: 'Cameroun',
+      city: 'Douala',
+      clientType: 'particulier',
+      status: ClientStatus.actif,
+      updatedBy: 'test-uid',
+    );
+    final client = (await clientsRepository.watchAll().first).first;
+
+    await logementsRepository.create(
+      clientId: client.id,
+      address: '2 rue de toutes les références',
+      updatedBy: 'test-uid',
+    );
+    final logement = (await logementsRepository.watchAll().first).first;
+
+    await abonnementsRepository.create(
+      clientId: client.id,
+      logementId: logement.id,
+      formula: 'Premium',
+      monthlyPrice: 30000,
+      startDate: DateTime(2026, 1, 1),
+      paymentStatus: PaymentStatus.aJour,
+      updatedBy: 'test-uid',
+    );
+    final abonnement = (await abonnementsRepository.watchAll().first).first;
+
+    await prestatairesRepository.create(
+      fullName: 'Prestataire Référence',
+      phone: '+237600000023',
+      specialty: 'Plomberie',
+      status: PrestataireStatus.actif,
+      updatedBy: 'test-uid',
+    );
+    final prestataire = (await prestatairesRepository.watchAll().first).first;
+
+    final interventionId = await interventionsRepository.create(
+      logementId: logement.id,
+      clientId: client.id,
+      prestataireId: prestataire.id,
+      problemDescription: 'Fuite à retrouver par référence',
+      urgencyLevel: UrgencyLevel.normale,
+      updatedBy: 'test-uid',
+    );
+    final intervention =
+        await interventionsRepository.getById(interventionId);
+
+    await financesRepository.create(
+      transactionDate: DateTime(2026, 9, 1),
+      transactionType: TransactionType.entree,
+      description: 'Paiement à retrouver par référence',
+      amount: 50000,
+      status: TransactionStatus.valide,
+      periodMonth: '2026-09',
+      updatedBy: 'test-uid',
+    );
+    final finance = (await financesRepository.watchAll().first).first;
+
+    await rapportsRepository.create(
+      logementId: logement.id,
+      periodMonth: '2026-09',
+      inspectionDone: true,
+      updatedBy: 'test-uid',
+    );
+    final rapport = (await rapportsRepository.watchAll().first).first;
+
+    final inspectionId = await inspectionsRepository.createWithChecklist(
+      logementId: logement.id,
+      inspectionDate: DateTime(2026, 9, 5),
+      updatedBy: 'test-uid',
+    );
+    final inspection = await inspectionsRepository.getById(inspectionId);
+
+    await refreshControllerLists();
+
+    void expectFoundByReference(String reference, ReferenceEntityType type) {
+      final results = controller.search(reference);
+      expect(results, isNotEmpty, reason: 'aucun résultat pour $reference');
+      expect(
+        results.any((r) => r.reference == reference && r.type == type),
+        isTrue,
+        reason: '$reference non retrouvée comme $type',
+      );
+    }
+
+    expectFoundByReference(client.reference, ReferenceEntityType.client);
+    expectFoundByReference(logement.reference, ReferenceEntityType.logement);
+    expectFoundByReference(
+        abonnement.reference, ReferenceEntityType.abonnement);
+    expectFoundByReference(
+        intervention!.reference, ReferenceEntityType.intervention);
+    expectFoundByReference(
+        prestataire.reference, ReferenceEntityType.prestataire);
+    expectFoundByReference(finance.reference, ReferenceEntityType.finance);
+    expectFoundByReference(rapport.reference, ReferenceEntityType.rapport);
+    expectFoundByReference(
+        inspection!.reference, ReferenceEntityType.inspection);
+
+    // Recherche partielle (sous-chaîne) sur une référence de rapport,
+    // insensible à la casse — exactement le scénario signalé par
+    // l'utilisateur.
+    final partial =
+        rapport.reference.substring(rapport.reference.length - 6).toLowerCase();
+    final partialResults = controller.search(partial);
+    expect(
+      partialResults.any(
+          (r) => r.type == ReferenceEntityType.rapport && r.id == rapport.id),
+      isTrue,
+    );
+  });
 }

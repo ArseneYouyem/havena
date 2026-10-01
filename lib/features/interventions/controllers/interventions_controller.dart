@@ -182,6 +182,20 @@ class InterventionsController extends GetxController {
     return '${inspection.reference} — ${_formatDate(inspection.inspectionDate)}';
   }
 
+  /// Référence seule (retour utilisateur : doit porter sa propre icône de
+  /// copie, indépendamment de la date affichée à côté).
+  String? inspectionReferenceFor(int? id) {
+    if (id == null) return null;
+    return _findInspection(id)?.reference;
+  }
+
+  String inspectionDateLabelFor(int? id) {
+    if (id == null) return 'Aucune inspection liée';
+    final inspection = _findInspection(id);
+    if (inspection == null) return 'Inspection introuvable';
+    return _formatDate(inspection.inspectionDate);
+  }
+
   String _formatDate(DateTime d) {
     return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }

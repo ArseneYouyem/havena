@@ -4,7 +4,7 @@ import 'package:havena/app/routes/app_routes.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/auth/repositories/auth_repository.dart';
-// import 'package:havena/shared/widgets/layout/reference_search_field.dart';
+import 'package:havena/shared/widgets/layout/reference_search_field.dart';
 import 'package:havena/shared/widgets/layout/sidebar_menu.dart';
 import 'package:havena/shared/widgets/layout/sync_status_indicator.dart';
 
@@ -53,10 +53,7 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Masqué sur demande utilisateur (retiré du topbar) — le
-          // controller/binding restent en place, rien d'autre ne monte ce
-          // widget pour l'instant.
-          // const ReferenceSearchField(),
+          const ReferenceSearchField(),
           const Spacer(),
           const SyncStatusIndicator(),
           const SizedBox(width: 20),

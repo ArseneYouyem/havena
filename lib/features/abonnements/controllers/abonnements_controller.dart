@@ -128,6 +128,24 @@ class AbonnementsController extends GetxController {
     return 'Client introuvable';
   }
 
+  /// Nom et référence séparés (retour utilisateur : la référence doit
+  /// porter sa propre icône de copie, indépendamment du nom).
+  String clientNameFor(int? clientId) {
+    if (clientId == null) return 'Client introuvable';
+    for (final client in clients) {
+      if (client.id == clientId) return client.fullName;
+    }
+    return 'Client introuvable';
+  }
+
+  String? clientReferenceFor(int? clientId) {
+    if (clientId == null) return null;
+    for (final client in clients) {
+      if (client.id == clientId) return client.reference;
+    }
+    return null;
+  }
+
   String logementLabelFor(int? logementId) {
     if (logementId == null) return 'Logement introuvable';
     for (final logement in logements) {
@@ -136,6 +154,22 @@ class AbonnementsController extends GetxController {
       }
     }
     return 'Logement introuvable';
+  }
+
+  String logementAddressFor(int? logementId) {
+    if (logementId == null) return 'Logement introuvable';
+    for (final logement in logements) {
+      if (logement.id == logementId) return logement.address;
+    }
+    return 'Logement introuvable';
+  }
+
+  String? logementReferenceFor(int? logementId) {
+    if (logementId == null) return null;
+    for (final logement in logements) {
+      if (logement.id == logementId) return logement.reference;
+    }
+    return null;
   }
 
   bool isRenewalOrPaymentSoon(Abonnement abonnement) {

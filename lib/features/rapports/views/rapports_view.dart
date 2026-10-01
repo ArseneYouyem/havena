@@ -5,6 +5,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/rapports/controllers/rapports_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 class RapportsContent extends GetView<RapportsController> {
   const RapportsContent({super.key});
@@ -65,8 +66,10 @@ class RapportsContent extends GetView<RapportsController> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final rapport = list[index];
-                  final clientLabel =
-                      controller.clientLabelFor(rapport.logementId);
+                  final clientName =
+                      controller.clientNameFor(rapport.logementId);
+                  final clientReference =
+                      controller.clientReferenceFor(rapport.logementId);
                   final logementReference =
                       controller.logementReferenceFor(rapport.logementId);
                   return Card(
@@ -98,17 +101,50 @@ class RapportsContent extends GetView<RapportsController> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            [
-                              rapport.reference,
-                              if (logementReference.isNotEmpty)
-                                logementReference,
-                              if (clientLabel.isNotEmpty) clientLabel,
-                            ].join(' — '),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              CopyableReference(
+                                rapport.reference,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              if (logementReference.isNotEmpty) ...[
+                                const Text(' — ',
+                                    style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12)),
+                                CopyableReference(
+                                  logementReference,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                              if (clientReference.isNotEmpty) ...[
+                                const Text(' — ',
+                                    style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12)),
+                                Text(
+                                  '$clientName ',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                CopyableReference(
+                                  clientReference,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           if (rapport.generalCondition != null)
                             _buildConditionBadge(rapport.generalCondition!),

@@ -5,6 +5,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/finances/controllers/finances_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 /// Sépare les milliers d'un montant, comme sur le tableau de bord (retour
 /// utilisateur) — ex. 400000 -> "400 000 FCFA".
@@ -818,14 +819,14 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: CopyableReference(
                   finance.reference,
+                  iconSize: 18,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               view._buildStatusBadge(finance.status),
@@ -869,20 +870,29 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
                     Icons.calendar_month_outlined,
                     'Période : ${finance.periodMonth}',
                   ),
-                  if (controller
-                      .clientLabelFor(finance.relatedClientId)
-                      .isNotEmpty)
-                    _buildInfoRow(
+                  if (controller.clientNameFor(finance.relatedClientId) !=
+                      null)
+                    _buildInfoRowWidget(
                       Icons.person_outline,
-                      controller.clientLabelFor(finance.relatedClientId),
+                      NameWithReference(
+                        controller.clientNameFor(finance.relatedClientId)!,
+                        controller
+                            .clientReferenceFor(finance.relatedClientId),
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
                     ),
-                  if (controller
-                      .prestataireLabelFor(finance.relatedPrestataireId)
-                      .isNotEmpty)
-                    _buildInfoRow(
+                  if (controller.prestataireNameFor(
+                          finance.relatedPrestataireId) !=
+                      null)
+                    _buildInfoRowWidget(
                       Icons.engineering_outlined,
-                      controller
-                          .prestataireLabelFor(finance.relatedPrestataireId),
+                      NameWithReference(
+                        controller.prestataireNameFor(
+                            finance.relatedPrestataireId)!,
+                        controller.prestataireReferenceFor(
+                            finance.relatedPrestataireId),
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
                     ),
                   if (finance.paymentMethod != null &&
                       finance.paymentMethod!.isNotEmpty)
@@ -933,6 +943,16 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
   }
 
   Widget _buildInfoRow(IconData icon, String value) {
+    return _buildInfoRowWidget(
+      icon,
+      Text(
+        value,
+        style: const TextStyle(color: AppColors.textPrimary),
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWidget(IconData icon, Widget child) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -940,12 +960,7 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
         children: [
           Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.textPrimary),
-            ),
-          ),
+          Expanded(child: child),
         ],
       ),
     );

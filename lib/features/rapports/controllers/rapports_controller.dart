@@ -125,14 +125,20 @@ class RapportsController extends GetxController {
   }
 
   /// Client du logement (retour utilisateur : affiché sur chaque rapport).
-  String clientLabelFor(int? logementId) {
-    if (logementId == null) return '';
+  /// Nom et référence séparés pour que la référence porte sa propre icône
+  /// de copie, indépendamment du nom.
+  Client? _clientForLogement(int? logementId) {
+    if (logementId == null) return null;
     final logement = _firstWhereOrNull(logements, (l) => l.id == logementId);
-    if (logement?.clientId == null) return '';
-    final client =
-        _firstWhereOrNull(clients, (c) => c.id == logement!.clientId);
-    return client == null ? '' : '${client.fullName} (${client.reference})';
+    if (logement?.clientId == null) return null;
+    return _firstWhereOrNull(clients, (c) => c.id == logement!.clientId);
   }
+
+  String clientNameFor(int? logementId) =>
+      _clientForLogement(logementId)?.fullName ?? '';
+
+  String clientReferenceFor(int? logementId) =>
+      _clientForLogement(logementId)?.reference ?? '';
 
   /// Rapports du mois sélectionné (retour utilisateur : la page affiche les
   /// rapports mois par mois), recherche texte appliquée en plus.

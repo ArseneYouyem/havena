@@ -5,6 +5,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/abonnements/controllers/abonnements_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 class AbonnementsContent extends GetView<AbonnementsController> {
   const AbonnementsContent({super.key});
@@ -95,7 +96,7 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                           size: 20,
                         ),
                       ),
-                      title: Text(
+                      title: CopyableReference(
                         abonnement.reference,
                         style: const TextStyle(color: AppColors.textPrimary),
                       ),
@@ -109,15 +110,19 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                               fontSize: 12,
                             ),
                           ),
-                          Text(
-                            controller.clientLabelFor(abonnement.clientId),
+                          NameWithReference(
+                            controller.clientNameFor(abonnement.clientId),
+                            controller.clientReferenceFor(abonnement.clientId),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                             ),
                           ),
-                          Text(
-                            controller.logementLabelFor(abonnement.logementId),
+                          NameWithReference(
+                            controller
+                                .logementAddressFor(abonnement.logementId),
+                            controller
+                                .logementReferenceFor(abonnement.logementId),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -642,14 +647,14 @@ class _AbonnementDrawerContent extends GetView<AbonnementsController> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: CopyableReference(
                   abonnement.reference,
+                  iconSize: 18,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               view._buildPaymentStatusBadge(abonnement.paymentStatus),
@@ -685,13 +690,21 @@ class _AbonnementDrawerContent extends GetView<AbonnementsController> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildInfoRow(
+                  _buildInfoRowWidget(
                     Icons.person_outline,
-                    controller.clientLabelFor(abonnement.clientId),
+                    NameWithReference(
+                      controller.clientNameFor(abonnement.clientId),
+                      controller.clientReferenceFor(abonnement.clientId),
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
                   ),
-                  _buildInfoRow(
+                  _buildInfoRowWidget(
                     Icons.home_work_outlined,
-                    controller.logementLabelFor(abonnement.logementId),
+                    NameWithReference(
+                      controller.logementAddressFor(abonnement.logementId),
+                      controller.logementReferenceFor(abonnement.logementId),
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
                   ),
                   _buildInfoRow(
                     Icons.event_outlined,
@@ -749,6 +762,16 @@ class _AbonnementDrawerContent extends GetView<AbonnementsController> {
   }
 
   Widget _buildInfoRow(IconData icon, String value) {
+    return _buildInfoRowWidget(
+      icon,
+      Text(
+        value,
+        style: const TextStyle(color: AppColors.textPrimary),
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWidget(IconData icon, Widget child) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -756,12 +779,7 @@ class _AbonnementDrawerContent extends GetView<AbonnementsController> {
         children: [
           Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.textPrimary),
-            ),
-          ),
+          Expanded(child: child),
         ],
       ),
     );

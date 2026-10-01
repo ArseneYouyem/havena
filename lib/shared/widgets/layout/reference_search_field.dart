@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/controllers/reference_search_controller.dart';
 import 'package:havena/app/theme/app_colors.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 /// Recherche transversale par référence HAVENA (cahier des charges §9) :
 /// accessible depuis la topbar, quelle que soit la section active.
@@ -62,7 +63,7 @@ class _ReferenceSearchFieldState extends State<ReferenceSearchField> {
               final result = results[index];
               return ListTile(
                 leading: Icon(_iconFor(result.type), color: AppColors.primary),
-                title: Text(result.reference),
+                title: CopyableReference(result.reference),
                 subtitle: Text(
                   '${referenceTypeLabels[result.type]} - ${result.label}',
                   overflow: TextOverflow.ellipsis,
@@ -105,10 +106,20 @@ class _ReferenceSearchFieldState extends State<ReferenceSearchField> {
               Icon(_iconFor(current.type), color: AppColors.primary),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '${referenceTypeLabels[current.type]} - ${current.reference}',
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    Text(
+                      '${referenceTypeLabels[current.type]} - ',
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Flexible(
+                      child: CopyableReference(
+                        current.reference,
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -176,7 +187,7 @@ class _ReferenceSearchFieldState extends State<ReferenceSearchField> {
                           dense: true,
                           leading:
                               Icon(_iconFor(r.type), color: AppColors.primary),
-                          title: Text(r.reference),
+                          title: CopyableReference(r.reference),
                           subtitle: Text(
                             '${referenceTypeLabels[r.type]} - ${r.label}',
                             overflow: TextOverflow.ellipsis,

@@ -5,6 +5,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/prestataires/controllers/prestataires_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 class PrestatairesContent extends GetView<PrestatairesController> {
   const PrestatairesContent({super.key});
@@ -102,7 +103,7 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          CopyableReference(
                             prestataire.reference,
                             style: const TextStyle(
                               color: AppColors.textSecondary,
@@ -672,7 +673,8 @@ class _PrestataireDrawerContent extends GetView<PrestatairesController> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow(Icons.badge_outlined, prestataire.reference),
+                    _buildInfoRow(Icons.badge_outlined, prestataire.reference,
+                        copyable: true),
                     _buildInfoRow(Icons.phone_outlined, prestataire.phone),
                     _buildInfoRow(
                         Icons.engineering_outlined, prestataire.specialty),
@@ -811,7 +813,7 @@ class _PrestataireDrawerContent extends GetView<PrestatairesController> {
     });
   }
 
-  Widget _buildInfoRow(IconData icon, String value) {
+  Widget _buildInfoRow(IconData icon, String value, {bool copyable = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -820,10 +822,15 @@ class _PrestataireDrawerContent extends GetView<PrestatairesController> {
           Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.textPrimary),
-            ),
+            child: copyable
+                ? CopyableReference(
+                    value,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  )
+                : Text(
+                    value,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  ),
           ),
         ],
       ),

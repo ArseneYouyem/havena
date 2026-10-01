@@ -5,6 +5,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/clients/controllers/clients_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 class ClientsContent extends GetView<ClientsController> {
   const ClientsContent({super.key});
@@ -101,7 +102,7 @@ class ClientsContent extends GetView<ClientsController> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          CopyableReference(
                             client.reference,
                             style: const TextStyle(
                               color: AppColors.textSecondary,
@@ -616,7 +617,8 @@ class _ClientDrawerContent extends GetView<ClientsController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow(Icons.badge_outlined, client.reference),
+                  _buildInfoRow(Icons.badge_outlined, client.reference,
+                      copyable: true),
                   _buildInfoRow(Icons.phone_outlined, client.phone),
                   if (client.whatsapp != null && client.whatsapp!.isNotEmpty)
                     _buildInfoRow(Icons.chat_outlined, client.whatsapp!),
@@ -682,7 +684,7 @@ class _ClientDrawerContent extends GetView<ClientsController> {
                       logement.address,
                       style: const TextStyle(color: AppColors.textPrimary),
                     ),
-                    subtitle: Text(
+                    subtitle: CopyableReference(
                       logement.reference,
                       style: const TextStyle(
                         color: AppColors.textSecondary,
@@ -760,7 +762,7 @@ class _ClientDrawerContent extends GetView<ClientsController> {
     return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
 
-  Widget _buildInfoRow(IconData icon, String value) {
+  Widget _buildInfoRow(IconData icon, String value, {bool copyable = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -769,10 +771,15 @@ class _ClientDrawerContent extends GetView<ClientsController> {
           Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.textPrimary),
-            ),
+            child: copyable
+                ? CopyableReference(
+                    value,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  )
+                : Text(
+                    value,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                  ),
           ),
         ],
       ),

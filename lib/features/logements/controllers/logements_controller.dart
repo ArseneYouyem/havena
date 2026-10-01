@@ -152,6 +152,21 @@ class LogementsController extends GetxController {
     return 'Non assigné';
   }
 
+  /// Nom et référence séparés (retour utilisateur : la référence doit
+  /// porter sa propre icône de copie, indépendamment du nom).
+  Client? _clientById(int? clientId) {
+    if (clientId == null) return null;
+    for (final client in clients) {
+      if (client.id == clientId) return client;
+    }
+    return null;
+  }
+
+  String clientNameFor(int? clientId) =>
+      _clientById(clientId)?.fullName ?? 'Non assigné';
+
+  String? clientReferenceFor(int? clientId) => _clientById(clientId)?.reference;
+
   void openCreateForm() {
     editingId.value = null;
     clientId.value = null;

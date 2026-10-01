@@ -7,6 +7,7 @@ import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/inspections/views/inspections_view.dart';
 import 'package:havena/features/interventions/views/interventions_view.dart';
 import 'package:havena/features/logements/controllers/logements_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 
 class LogementsContent extends GetView<LogementsController> {
   const LogementsContent({super.key});
@@ -107,7 +108,7 @@ class LogementsContent extends GetView<LogementsController> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          CopyableReference(
                             logement.reference,
                             style: const TextStyle(
                               color: AppColors.textSecondary,
@@ -122,8 +123,9 @@ class LogementsContent extends GetView<LogementsController> {
                                 fontSize: 12,
                               ),
                             ),
-                          Text(
-                            controller.clientLabelFor(logement.clientId),
+                          NameWithReference(
+                            controller.clientNameFor(logement.clientId),
+                            controller.clientReferenceFor(logement.clientId),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -204,8 +206,9 @@ class LogementsContent extends GetView<LogementsController> {
                   onPressed: () => controller.selectLogement(null),
                 ),
                 const SizedBox(width: 8),
-                Text(
+                CopyableReference(
                   currentLogement.reference,
+                  iconSize: 18,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
@@ -242,9 +245,11 @@ class LogementsContent extends GetView<LogementsController> {
                       ),
                     ],
                     const SizedBox(height: 8),
-                    Text(
-                      'Client : ${controller.clientLabelFor(currentLogement.clientId)}',
+                    NameWithReference(
+                      controller.clientNameFor(currentLogement.clientId),
+                      controller.clientReferenceFor(currentLogement.clientId),
                       style: const TextStyle(color: AppColors.textSecondary),
+                      prefix: 'Client : ',
                     ),
                     if (currentLogement.generalCondition != null) ...[
                       const SizedBox(height: 8),
@@ -357,7 +362,7 @@ class LogementsContent extends GetView<LogementsController> {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       onTap: item.onTap,
-                      title: Text(
+                      title: CopyableReference(
                         item.title,
                         style:
                             const TextStyle(color: AppColors.textPrimary),
