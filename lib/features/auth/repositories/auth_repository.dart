@@ -95,4 +95,23 @@ class AuthRepository {
   Future<List<UserAccount>> listAllUsers() async {
     return _firestoreUsersService.listUsers();
   }
+
+  Future<void> updateAdministrator({
+    required String uid,
+    required String fullName,
+    required AppRole role,
+  }) async {
+    await _firestoreUsersService.updateUser(
+      uid,
+      fullName: fullName,
+      role: role,
+    );
+  }
+
+  Future<void> setAdministratorActive({
+    required String uid,
+    required bool active,
+  }) async {
+    await _firestoreUsersService.updateUser(uid, active: active);
+  }
 }

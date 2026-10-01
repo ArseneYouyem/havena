@@ -56,19 +56,32 @@ class LoginView extends GetView<LoginController> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  onChanged: (value) => controller.password.value = value,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Mot de passe',
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.primary),
+                Obx(
+                  () => TextField(
+                    onChanged: (value) => controller.password.value = value,
+                    obscureText: !controller.isPasswordVisible.value,
+                    decoration: InputDecoration(
+                      labelText: 'Mot de passe',
+                      suffixIcon: IconButton(
+                        onPressed: () => controller.isPasswordVisible.toggle(),
+                        tooltip: controller.isPasswordVisible.value
+                            ? 'Masquer le mot de passe'
+                            : 'Afficher le mot de passe',
+                        icon: Icon(
+                          controller.isPasswordVisible.value
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                      ),
+                      border: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.primary),
+                      ),
                     ),
                   ),
                 ),

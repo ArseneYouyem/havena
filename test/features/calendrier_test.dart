@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/controllers/calendrier_controller.dart';
 import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 
 void main() {
@@ -16,6 +18,31 @@ void main() {
   tearDown(() async {
     await database.close();
   });
+
+  test(
+    'trie et filtre sans modifier la liste réactive des événements',
+    () async {
+      for (final day in [5, 1, 3]) {
+        await repository.create(
+          eventType: CalendarEventType.rendezVous,
+          title: day == 3 ? 'Inspection' : 'Visite',
+          eventDate: DateTime(2026, 10, day),
+          status: CalendarEventStatus.planifie,
+          updatedBy: 'test-uid',
+        );
+      }
+      final source = (await repository.watchAll().first)
+        ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
+      final controller = CalendrierController(repository, SessionController());
+      controller.events.value = List.of(source);
+
+      expect(controller.sortedEvents().map((e) => e.eventDate.day), [1, 3, 5]);
+      expect(controller.events.map((e) => e.eventDate.day), [5, 3, 1]);
+      controller.searchQuery.value = 'visite';
+      expect(controller.sortedEvents().map((e) => e.eventDate.day), [1, 5]);
+      expect(controller.events.map((e) => e.eventDate.day), [5, 3, 1]);
+    },
+  );
 
   test('crée un événement et le retrouve dans la liste', () async {
     await repository.create(
@@ -75,8 +102,7 @@ void main() {
     expect(events, isEmpty);
   });
 
-  test(
-      'markGoogleSynced associe l\'id Google Calendar sans effacer les '
+  test('markGoogleSynced associe l\'id Google Calendar sans effacer les '
       'autres champs', () async {
     await repository.create(
       eventType: CalendarEventType.rendezVous,
@@ -99,26 +125,28 @@ void main() {
     expect(updated.relatedReference, 'HAV-INT-000001');
   });
 
-  test('upsertFromRemote reprend googleEventId depuis le document distant',
-      () async {
-    await repository.upsertFromRemote(
-      syncId: 'sync-abc',
-      data: {
-        'eventType': CalendarEventType.rendezVous.name,
-        'title': 'Créé sur un autre appareil',
-        'eventDate': DateTime(2026, 10, 5, 14, 30).toIso8601String(),
-        'relatedReference': null,
-        'responsibleUserId': null,
-        'status': CalendarEventStatus.planifie.name,
-        'updatedAt': DateTime(2026, 10, 5).toIso8601String(),
-        'updatedBy': 'autre-appareil',
-        'isDeleted': false,
-        'googleEventId': 'google-evt-456',
-      },
-    );
+  test(
+    'upsertFromRemote reprend googleEventId depuis le document distant',
+    () async {
+      await repository.upsertFromRemote(
+        syncId: 'sync-abc',
+        data: {
+          'eventType': CalendarEventType.rendezVous.name,
+          'title': 'Créé sur un autre appareil',
+          'eventDate': DateTime(2026, 10, 5, 14, 30).toIso8601String(),
+          'relatedReference': null,
+          'responsibleUserId': null,
+          'status': CalendarEventStatus.planifie.name,
+          'updatedAt': DateTime(2026, 10, 5).toIso8601String(),
+          'updatedBy': 'autre-appareil',
+          'isDeleted': false,
+          'googleEventId': 'google-evt-456',
+        },
+      );
 
-    final event = await repository.findBySyncId('sync-abc');
-    expect(event, isNotNull);
-    expect(event!.googleEventId, 'google-evt-456');
-  });
+      final event = await repository.findBySyncId('sync-abc');
+      expect(event, isNotNull);
+      expect(event!.googleEventId, 'google-evt-456');
+    },
+  );
 }

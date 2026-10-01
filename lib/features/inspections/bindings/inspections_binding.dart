@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/inspections/controllers/inspections_controller.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
@@ -22,8 +23,10 @@ class InspectionsBinding extends Bindings {
     Get.lazyPut<InspectionItemsRepository>(
       () => InspectionItemsRepository(db.inspectionItemsDao),
     );
-    // Nécessite que LogementsBinding soit également enregistrée sur la page
-    // pour fournir LogementsRepository.
+    // Nécessite que LogementsBinding et CalendrierBinding soient également
+    // enregistrées sur la page (résolution paresseuse, voir ClientsBinding) :
+    // la création d'une inspection enregistre automatiquement son évènement
+    // dans le Calendrier.
     Get.lazyPut<InspectionsController>(
       () => InspectionsController(
         inspectionsRepository: Get.find(),
@@ -31,6 +34,7 @@ class InspectionsBinding extends Bindings {
         logementsRepository: Get.find(),
         photosRepository: Get.find(),
         sessionController: Get.find<SessionController>(),
+        calendrierRepository: Get.find<CalendrierRepository>(),
       ),
     );
   }

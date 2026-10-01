@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -10,18 +11,24 @@ class ClientsContent extends GetView<ClientsController> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildListView(context),
+        const _ClientDrawer(),
+      ],
+    );
+  }
+
+  Widget _buildListView(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Clients',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Clients',
+            subtitle: 'Les contacts et informations de vos clients.',
+            icon: Icons.people_outline,
           ),
           const SizedBox(height: 16),
           Row(
@@ -75,9 +82,11 @@ class ClientsContent extends GetView<ClientsController> {
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
+                      onTap: () => controller.selectClient(client.id),
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         child: Text(
                           client.fullName.isNotEmpty
                               ? client.fullName[0].toUpperCase()
@@ -192,29 +201,33 @@ class ClientsContent extends GetView<ClientsController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.fullName.value),
+                  controller: TextEditingController(
+                    text: controller.fullName.value,
+                  ),
                   onChanged: (value) => controller.fullName.value = value,
                   decoration: _inputDecoration('Nom complet *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.phone.value),
+                  controller: TextEditingController(
+                    text: controller.phone.value,
+                  ),
                   onChanged: (value) => controller.phone.value = value,
                   decoration: _inputDecoration('Téléphone *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.whatsapp.value),
+                  controller: TextEditingController(
+                    text: controller.whatsapp.value,
+                  ),
                   onChanged: (value) => controller.whatsapp.value = value,
                   decoration: _inputDecoration('WhatsApp (optionnel)'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.email.value),
+                  controller: TextEditingController(
+                    text: controller.email.value,
+                  ),
                   onChanged: (value) => controller.email.value = value,
                   decoration: _inputDecoration('Email (optionnel)'),
                 ),
@@ -224,9 +237,9 @@ class ClientsContent extends GetView<ClientsController> {
                     Expanded(
                       child: TextField(
                         controller: TextEditingController(
-                            text: controller.country.value),
-                        onChanged: (value) =>
-                            controller.country.value = value,
+                          text: controller.country.value,
+                        ),
+                        onChanged: (value) => controller.country.value = value,
                         decoration: _inputDecoration('Pays *'),
                       ),
                     ),
@@ -234,7 +247,8 @@ class ClientsContent extends GetView<ClientsController> {
                     Expanded(
                       child: TextField(
                         controller: TextEditingController(
-                            text: controller.city.value),
+                          text: controller.city.value,
+                        ),
                         onChanged: (value) => controller.city.value = value,
                         decoration: _inputDecoration('Ville *'),
                       ),
@@ -244,34 +258,45 @@ class ClientsContent extends GetView<ClientsController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.clientType.value),
+                    text: controller.clientType.value,
+                  ),
                   onChanged: (value) => controller.clientType.value = value,
                   decoration: _inputDecoration('Type de client *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.logementReference.value),
+                    text: controller.logementReference.value,
+                  ),
                   onChanged: (value) =>
                       controller.logementReference.value = value,
-                  decoration:
-                      _inputDecoration('Référence logement (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Référence logement (optionnel)',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.subscriptionFormula.value),
+                    text: controller.subscriptionFormula.value,
+                  ),
                   onChanged: (value) =>
                       controller.subscriptionFormula.value = value,
-                  decoration:
-                      _inputDecoration('Formule abonnement (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Formule abonnement (optionnel)',
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _buildDateField(context, 'Date de début (optionnel)',
-                    controller.startDate),
+                _buildDateField(
+                  context,
+                  'Date de début (optionnel)',
+                  controller.startDate,
+                ),
                 const SizedBox(height: 16),
-                _buildDateField(context, 'Date de renouvellement (optionnel)',
-                    controller.renewalDate),
+                _buildDateField(
+                  context,
+                  'Date de renouvellement (optionnel)',
+                  controller.renewalDate,
+                ),
                 const SizedBox(height: 16),
                 Obx(() {
                   return DropdownButtonFormField<ClientStatus>(
@@ -289,12 +314,16 @@ class ClientsContent extends GetView<ClientsController> {
                   );
                 }),
                 const SizedBox(height: 16),
-                _buildDateField(context, 'Dernier contact (optionnel)',
-                    controller.lastContactDate),
+                _buildDateField(
+                  context,
+                  'Dernier contact (optionnel)',
+                  controller.lastContactDate,
+                ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.notes.value),
+                  controller: TextEditingController(
+                    text: controller.notes.value,
+                  ),
                   onChanged: (value) => controller.notes.value = value,
                   decoration: _inputDecoration('Notes (optionnel)'),
                   maxLines: 3,
@@ -349,7 +378,10 @@ class ClientsContent extends GetView<ClientsController> {
   }
 
   Widget _buildDateField(
-      BuildContext context, String label, Rxn<DateTime> dateField) {
+    BuildContext context,
+    String label,
+    Rxn<DateTime> dateField,
+  ) {
     return InkWell(
       onTap: () async {
         final now = DateTime.now();
@@ -435,6 +467,216 @@ class ClientsContent extends GetView<ClientsController> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Drawer qui glisse depuis la droite et s'arrête à mi-largeur de l'onglet
+/// Clients pour afficher les détails du client cliqué et la liste de ses
+/// logements enregistrés, sans changer d'onglet.
+class _ClientDrawer extends StatelessWidget {
+  const _ClientDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<ClientsController>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final id = controller.selectedClientId.value;
+          Client? client;
+          if (id != null) {
+            for (final c in controller.clients) {
+              if (c.id == id) {
+                client = c;
+                break;
+              }
+            }
+          }
+          final isOpen = client != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectClient(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: client == null
+                      ? const SizedBox.shrink()
+                      : _ClientDrawerContent(
+                          client: client,
+                          onClose: () => controller.selectClient(null),
+                        ),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+}
+
+class _ClientDrawerContent extends GetView<ClientsController> {
+  const _ClientDrawerContent({required this.client, required this.onClose});
+
+  final Client client;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                color: AppColors.textPrimary,
+                onPressed: onClose,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  client.fullName,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow(Icons.badge_outlined, client.reference),
+                  _buildInfoRow(Icons.phone_outlined, client.phone),
+                  if (client.whatsapp != null && client.whatsapp!.isNotEmpty)
+                    _buildInfoRow(Icons.chat_outlined, client.whatsapp!),
+                  if (client.email != null && client.email!.isNotEmpty)
+                    _buildInfoRow(Icons.email_outlined, client.email!),
+                  _buildInfoRow(
+                    Icons.location_on_outlined,
+                    '${client.city}, ${client.country}',
+                  ),
+                  _buildInfoRow(Icons.category_outlined, client.clientType),
+                  if (client.subscriptionFormula != null &&
+                      client.subscriptionFormula!.isNotEmpty)
+                    _buildInfoRow(
+                      Icons.card_membership_outlined,
+                      client.subscriptionFormula!,
+                    ),
+                  if (client.notes != null && client.notes!.isNotEmpty)
+                    _buildInfoRow(Icons.notes_outlined, client.notes!),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Icon(Icons.home_work_outlined,
+                  size: 18, color: AppColors.secondaryText),
+              const SizedBox(width: 8),
+              const Text(
+                'Logements',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Obx(() {
+            final logements = controller.logementsForClient(client.id);
+            if (logements.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Aucun logement enregistré',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
+            }
+            return Column(
+              children: logements.map((logement) {
+                return Card(
+                  color: AppColors.surface,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.home, color: AppColors.primary),
+                    title: Text(
+                      logement.address,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
+                    subtitle: Text(
+                      logement.reference,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
           ),
         ],
       ),

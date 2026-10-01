@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -13,13 +14,10 @@ class DocumentsContent extends GetView<DocumentsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Documents',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Documents',
+            subtitle: 'Retrouvez les documents de votre activité.',
+            icon: Icons.folder_outlined,
           ),
           const SizedBox(height: 4),
           const Text(
@@ -61,13 +59,15 @@ class DocumentsContent extends GetView<DocumentsController> {
                     initialValue: controller.selectedEntityId.value,
                     decoration: _inputDecoration('Élément concerné'),
                     items: options
-                        .map((option) => DropdownMenuItem(
-                              value: option.id,
-                              child: Text(
-                                option.label,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ))
+                        .map(
+                          (option) => DropdownMenuItem(
+                            value: option.id,
+                            child: Text(
+                              option.label,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (value) {
                       controller.selectedEntityId.value = value;
@@ -94,8 +94,9 @@ class DocumentsContent extends GetView<DocumentsController> {
                   return SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed:
-                          generating ? null : controller.generateAndPreview,
+                      onPressed: generating
+                          ? null
+                          : controller.generateAndPreview,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,

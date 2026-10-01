@@ -43,6 +43,7 @@ class SyncStatusIndicator extends StatelessWidget {
       final error = controller.error.value;
 
       final label = _labelFor(
+        connected: connected,
         syncing: syncing,
         pending: pending,
         conflictsCount: conflictsCount,
@@ -51,7 +52,9 @@ class SyncStatusIndicator extends StatelessWidget {
       );
       final color = error != null || conflictsCount > 0
           ? AppColors.warning
-          : (lastSync != null ? AppColors.success : AppColors.textSecondary);
+          : (lastSync != null || connected
+              ? AppColors.success
+              : AppColors.textSecondary);
 
       return PopupMenuButton<String>(
         tooltip: 'Synchronisation',
@@ -85,6 +88,9 @@ class SyncStatusIndicator extends StatelessWidget {
                   connected
                       ? 'Se déconnecter du compte Google de l\'entreprise'
                       : 'Connecter le compte Google de l\'entreprise',
+                  style: connected
+                      ? const TextStyle(color: AppColors.secondary)
+                      : null,
                 ),
               ),
           ];
@@ -118,6 +124,7 @@ class SyncStatusIndicator extends StatelessWidget {
   }
 
   String _labelFor({
+    required bool connected,
     required bool syncing,
     required int pending,
     required int conflictsCount,
@@ -128,7 +135,11 @@ class SyncStatusIndicator extends StatelessWidget {
     if (syncing) return 'Synchronisation...';
     if (conflictsCount > 0) return '$conflictsCount conflit(s) à résoudre';
     if (lastSync == null) {
-      return pending > 0 ? '$pending photo(s) en attente' : 'Non synchronisé';
+      if (pending > 0) return '$pending photo(s) en attente';
+      // Connecté au compte Drive de l'entreprise mais aucune synchronisation
+      // effectuée pour l'instant sur cet appareil — distinct de « jamais
+      // connecté » (repéré par l'utilisateur : rien ne l'indiquait avant).
+      return connected ? 'Connecté — en attente de synchronisation' : 'Non synchronisé';
     }
     final hour = lastSync.hour.toString().padLeft(2, '0');
     final minute = lastSync.minute.toString().padLeft(2, '0');

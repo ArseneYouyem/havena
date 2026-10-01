@@ -5,15 +5,19 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      surface: AppColors.surface,
-      error: AppColors.error,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          onSecondary: AppColors.textPrimary,
+          secondaryContainer: AppColors.secondarySurface,
+          onSecondaryContainer: AppColors.secondaryText,
+          surface: AppColors.surface,
+          error: AppColors.error,
+        );
 
     final base = ThemeData(
       useMaterial3: true,
@@ -29,6 +33,24 @@ class AppTheme {
     );
 
     return base.copyWith(
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
       textTheme: base.textTheme
           .apply(
             bodyColor: AppColors.textPrimary,

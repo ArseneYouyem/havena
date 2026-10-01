@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -8,6 +9,15 @@ import 'package:havena/features/calendrier/controllers/calendrier_controller.dar
 class CalendrierContent extends GetView<CalendrierController> {
   const CalendrierContent({super.key});
 
+  /// Types sélectionnables à la création MANUELLE d'un évènement (retour
+  /// utilisateur) : Inspection et Intervention sont désormais créés
+  /// automatiquement par leurs modules respectifs, jamais à la main ici.
+  static const _manualEventTypes = [
+    CalendarEventType.rendezVous,
+    CalendarEventType.renouvellement,
+    CalendarEventType.visiteUrgente,
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -15,13 +25,10 @@ class CalendrierContent extends GetView<CalendrierController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Calendrier',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Calendrier',
+            subtitle: 'Organisez les rendez-vous et les interventions.',
+            icon: Icons.calendar_month_outlined,
           ),
           const SizedBox(height: 16),
           Obx(() {
@@ -54,88 +61,312 @@ class CalendrierContent extends GetView<CalendrierController> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: Obx(() {
-              final list = controller.sortedEvents();
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Aucun événement',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                );
-              }
-              if (list.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Aucun résultat',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                );
-              }
-              return ListView.builder(
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  final event = list[index];
-                  return Card(
-                    color: AppColors.surface,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      leading: Icon(
-                        _eventIcon(event.eventType),
-                        color: AppColors.primary,
-                      ),
-                      title: Text(
-                        event.title,
-                        style: const TextStyle(color: AppColors.textPrimary),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _formatDateTime(event.eventDate),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (event.relatedReference != null &&
-                              event.relatedReference!.isNotEmpty)
-                            Text(
-                              event.relatedReference!,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildStatusBadge(event.status),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            color: AppColors.textSecondary,
-                            onPressed: () =>
-                                _showFormDialog(context, event: event),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () => _confirmDelete(context, event),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 320, child: _buildCalendarCard(context)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildEventsPanel(context)),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // CALENDRIER (grille du mois)
+  // ---------------------------------------------------------------------------
+  static const _weekdayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  static const _monthLabels = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+
+  Widget _buildCalendarCard(BuildContext context) {
+    return Card(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Obx(() {
+          final month = controller.visibleMonth.value ??
+              DateTime(DateTime.now().year, DateTime.now().month);
+          final selected = controller.selectedDay.value;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    color: AppColors.textPrimary,
+                    onPressed: controller.goToPreviousMonth,
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${_monthLabels[month.month - 1]} ${month.year}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    color: AppColors.textPrimary,
+                    onPressed: controller.goToNextMonth,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: _weekdayLabels
+                    .map(
+                      (label) => Expanded(
+                        child: Center(
+                          child: Text(
+                            label,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 4),
+              ..._buildWeeks(month, selected),
+              if (selected != null) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => controller.selectDay(null),
+                    icon: const Icon(Icons.clear, size: 16),
+                    label: const Text('Afficher tous les événements'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  List<Widget> _buildWeeks(DateTime month, DateTime? selected) {
+    final firstDay = DateTime(month.year, month.month, 1);
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    // `weekday` : lundi = 1 ... dimanche = 7 -> nombre de cases vides avant
+    // le 1er du mois pour une grille commençant le lundi.
+    final leadingBlanks = firstDay.weekday - 1;
+    final totalCells = leadingBlanks + daysInMonth;
+    final rows = (totalCells / 7).ceil();
+
+    final weeks = <Widget>[];
+    var dayCounter = 1;
+    for (var row = 0; row < rows; row++) {
+      final cells = <Widget>[];
+      for (var col = 0; col < 7; col++) {
+        final cellIndex = row * 7 + col;
+        if (cellIndex < leadingBlanks || dayCounter > daysInMonth) {
+          cells.add(const Expanded(child: SizedBox(height: 36)));
+        } else {
+          final day = DateTime(month.year, month.month, dayCounter);
+          cells.add(_buildDayCell(day, selected));
+          dayCounter++;
+        }
+      }
+      weeks.add(Row(children: cells));
+    }
+    return weeks;
+  }
+
+  Widget _buildDayCell(DateTime day, DateTime? selected) {
+    final now = DateTime.now();
+    final isToday = _isSameDay(day, now);
+    final isSelected = selected != null && _isSameDay(day, selected);
+    final hasEvent = controller.hasEventOn(day);
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => controller.selectDay(isSelected ? null : day),
+          child: Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary
+                  : isToday
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: isToday && !isSelected
+                  ? Border.all(color: AppColors.primary)
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${day.day}',
+                  style: TextStyle(
+                    color:
+                        isSelected ? Colors.white : AppColors.textPrimary,
+                    fontWeight:
+                        isToday ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
+                  ),
+                ),
+                if (hasEvent)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : AppColors.secondary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  // ---------------------------------------------------------------------------
+  // PANNEAU DES ÉVÉNEMENTS (droite)
+  // ---------------------------------------------------------------------------
+  Widget _buildEventsPanel(BuildContext context) {
+    return Obx(() {
+      final list = controller.displayedEvents();
+      final selected = controller.selectedDay.value;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            selected == null
+                ? 'Tous les événements'
+                : 'Événements du ${_formatDateOnly(selected)}',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: list.isEmpty
+                ? Center(
+                    child: Text(
+                      controller.events.isEmpty
+                          ? 'Aucun événement'
+                          : selected == null
+                              ? 'Aucun résultat'
+                              : 'Aucun événement ce jour-là',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (context, index) =>
+                        _buildEventCard(context, list[index]),
+                  ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildEventCard(BuildContext context, CalendrierEvenement event) {
+    return Card(
+      color: AppColors.surface,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          _eventIcon(event.eventType),
+          color: AppColors.primary,
+        ),
+        title: Text(
+          event.title,
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _formatDateTime(event.eventDate),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            if (event.relatedReference != null &&
+                event.relatedReference!.isNotEmpty)
+              Text(
+                event.relatedReference!,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStatusBadge(event.status),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              color: AppColors.textSecondary,
+              onPressed: () => _showFormDialog(context, event: event),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              color: AppColors.error,
+              onPressed: () => _confirmDelete(context, event),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateOnly(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 
   Widget _buildTodayCard(List<CalendrierEvenement> todayEvents) {
@@ -225,10 +456,20 @@ class CalendrierContent extends GetView<CalendrierController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Obx(() {
+                  // Un évènement Inspection/Intervention existant (créé
+                  // automatiquement) garde son type affiché même s'il n'est
+                  // plus sélectionnable pour une NOUVELLE création — sinon
+                  // `DropdownButtonFormField` lève une erreur (valeur
+                  // courante absente de `items`).
+                  final selectableTypes = {
+                    ..._manualEventTypes,
+                    if (controller.eventType.value != null)
+                      controller.eventType.value!,
+                  }.toList();
                   return DropdownButtonFormField<CalendarEventType>(
                     initialValue: controller.eventType.value,
                     decoration: _inputDecoration('Type d\'événement *'),
-                    items: CalendarEventType.values.map((type) {
+                    items: selectableTypes.map((type) {
                       return DropdownMenuItem(
                         value: type,
                         child: Text(_eventTypeLabel(type)),
@@ -241,8 +482,9 @@ class CalendrierContent extends GetView<CalendrierController> {
                 }),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.title.value),
+                  controller: TextEditingController(
+                    text: controller.title.value,
+                  ),
                   onChanged: (value) => controller.title.value = value,
                   decoration: _inputDecoration('Titre *'),
                 ),
@@ -264,8 +506,11 @@ class CalendrierContent extends GetView<CalendrierController> {
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const Icon(Icons.calendar_today_outlined,
-                              size: 20, color: AppColors.textSecondary),
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
                         ],
                       ),
                     ),
@@ -274,11 +519,13 @@ class CalendrierContent extends GetView<CalendrierController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.relatedReference.value),
+                    text: controller.relatedReference.value,
+                  ),
                   onChanged: (value) =>
                       controller.relatedReference.value = value,
-                  decoration:
-                      _inputDecoration('Référence associée (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Référence associée (optionnel)',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Obx(() {

@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -15,13 +16,10 @@ class PrestatairesContent extends GetView<PrestatairesController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Prestataires',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Prestataires',
+            subtitle: 'Retrouvez les professionnels qui vous accompagnent.',
+            icon: Icons.engineering_outlined,
           ),
           const SizedBox(height: 16),
           Row(
@@ -76,8 +74,9 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                         child: Text(
                           prestataire.fullName.isNotEmpty
                               ? prestataire.fullName[0].toUpperCase()
@@ -140,8 +139,10 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                           IconButton(
                             icon: const Icon(Icons.edit_outlined),
                             color: AppColors.textSecondary,
-                            onPressed: () => _showFormDialog(context,
-                                prestataire: prestataire),
+                            onPressed: () => _showFormDialog(
+                              context,
+                              prestataire: prestataire,
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
@@ -222,40 +223,46 @@ class PrestatairesContent extends GetView<PrestatairesController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.fullName.value),
+                  controller: TextEditingController(
+                    text: controller.fullName.value,
+                  ),
                   onChanged: (value) => controller.fullName.value = value,
                   decoration: _inputDecoration('Nom complet *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.phone.value),
+                  controller: TextEditingController(
+                    text: controller.phone.value,
+                  ),
                   onChanged: (value) => controller.phone.value = value,
                   decoration: _inputDecoration('Téléphone *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.specialty.value),
+                  controller: TextEditingController(
+                    text: controller.specialty.value,
+                  ),
                   onChanged: (value) => controller.specialty.value = value,
                   decoration: _inputDecoration('Spécialité *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.zone.value),
+                  controller: TextEditingController(
+                    text: controller.zone.value,
+                  ),
                   onChanged: (value) => controller.zone.value = value,
                   decoration: _inputDecoration('Zone (optionnel)'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.experienceYearsText.value),
+                    text: controller.experienceYearsText.value,
+                  ),
                   onChanged: (value) =>
                       controller.experienceYearsText.value = value,
-                  decoration:
-                      _inputDecoration('Années d\'expérience (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Années d\'expérience (optionnel)',
+                  ),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
@@ -291,12 +298,14 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.indicativeRateText.value),
+                    text: controller.indicativeRateText.value,
+                  ),
                   onChanged: (value) =>
                       controller.indicativeRateText.value = value,
                   decoration: _inputDecoration('Tarif indicatif (optionnel)'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -304,26 +313,32 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                     Expanded(
                       child: TextField(
                         controller: TextEditingController(
-                            text: controller.qualityRatingText.value),
+                          text: controller.qualityRatingText.value,
+                        ),
                         onChanged: (value) =>
                             controller.qualityRatingText.value = value,
-                        decoration:
-                            _inputDecoration('Qualité (0-5, optionnel)'),
+                        decoration: _inputDecoration(
+                          'Qualité (0-5, optionnel)',
+                        ),
                         keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
+                          decimal: true,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: TextField(
                         controller: TextEditingController(
-                            text: controller.punctualityRatingText.value),
+                          text: controller.punctualityRatingText.value,
+                        ),
                         onChanged: (value) =>
                             controller.punctualityRatingText.value = value,
-                        decoration:
-                            _inputDecoration('Ponctualité (0-5, optionnel)'),
+                        decoration: _inputDecoration(
+                          'Ponctualité (0-5, optionnel)',
+                        ),
                         keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
+                          decimal: true,
+                        ),
                       ),
                     ),
                   ],
@@ -331,13 +346,16 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.communicationRatingText.value),
+                    text: controller.communicationRatingText.value,
+                  ),
                   onChanged: (value) =>
                       controller.communicationRatingText.value = value,
-                  decoration:
-                      _inputDecoration('Communication (0-5, optionnel)'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDecoration(
+                    'Communication (0-5, optionnel)',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Obx(() {
@@ -358,7 +376,8 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.observations.value),
+                    text: controller.observations.value,
+                  ),
                   onChanged: (value) => controller.observations.value = value,
                   decoration: _inputDecoration('Observations (optionnel)'),
                   maxLines: 3,

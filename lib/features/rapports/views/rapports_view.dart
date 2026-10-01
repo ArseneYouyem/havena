@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -15,13 +16,10 @@ class RapportsContent extends GetView<RapportsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Rapports mensuels',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Rapports mensuels',
+            subtitle: 'Les bilans mensuels de votre activité.',
+            icon: Icons.bar_chart_outlined,
           ),
           const SizedBox(height: 24),
           Row(
@@ -76,10 +74,14 @@ class RapportsContent extends GetView<RapportsController> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.description,
-                            color: AppColors.primary, size: 20),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
+                        child: const Icon(
+                          Icons.description,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
                       title: Text(
                         rapport.reference,
@@ -108,8 +110,11 @@ class RapportsContent extends GetView<RapportsController> {
                             const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.check_circle,
-                                    color: AppColors.success, size: 16),
+                                Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.success,
+                                  size: 16,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   'Inspection réalisée',
@@ -149,8 +154,9 @@ class RapportsContent extends GetView<RapportsController> {
                               color: AppColors.primary,
                               onPressed: generating
                                   ? null
-                                  : () => controller
-                                      .generateAndPreviewPdf(rapport.id),
+                                  : () => controller.generateAndPreviewPdf(
+                                      rapport.id,
+                                    ),
                               tooltip: 'Générer / Aperçu PDF',
                             );
                           }),
@@ -163,8 +169,7 @@ class RapportsContent extends GetView<RapportsController> {
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             color: AppColors.error,
-                            onPressed: () =>
-                                _confirmDelete(context, rapport),
+                            onPressed: () => _confirmDelete(context, rapport),
                           ),
                         ],
                       ),
@@ -232,6 +237,33 @@ class RapportsContent extends GetView<RapportsController> {
       controller.openCreateForm();
     }
 
+    // Contrôleurs stables (créés une seule fois à l'ouverture du dialog) :
+    // recréer un TextEditingController à chaque build, comme le faisaient
+    // ces champs auparavant, empêche le pré-remplissage automatique
+    // (`autoFillFromRecords`) de s'afficher, et casse la position du
+    // curseur pendant la saisie (même bug déjà corrigé sur « Gestion des
+    // accès »).
+    final periodMonthController =
+        TextEditingController(text: controller.periodMonth.value);
+    final anomaliesController =
+        TextEditingController(text: controller.anomalies.value);
+    final interventionsDoneController =
+        TextEditingController(text: controller.interventionsDone.value);
+    final totalExpensesController =
+        TextEditingController(text: controller.totalExpensesText.value);
+    final recommendationsController =
+        TextEditingController(text: controller.recommendations.value);
+    final nextActionsController =
+        TextEditingController(text: controller.nextActions.value);
+
+    Future<void> autoFillAndRefresh() async {
+      await controller.autoFillFromRecords();
+      anomaliesController.text = controller.anomalies.value ?? '';
+      interventionsDoneController.text = controller.interventionsDone.value ?? '';
+      totalExpensesController.text = controller.totalExpensesText.value;
+      recommendationsController.text = controller.recommendations.value ?? '';
+    }
+
     Get.dialog(
       AlertDialog(
         backgroundColor: AppColors.surface,
@@ -263,22 +295,27 @@ class RapportsContent extends GetView<RapportsController> {
                         return DropdownMenuItem<int?>(
                           value: logement.id,
                           child: Text(
-                              '${logement.reference} — ${logement.address}'),
+                            '${logement.reference} — ${logement.address}',
+                          ),
                         );
                       }),
                     ],
                     onChanged: (value) {
                       controller.logementId.value = value;
+                      autoFillAndRefresh();
                     },
                   );
                 }),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.periodMonth.value),
-                  onChanged: (value) => controller.periodMonth.value = value,
-                  decoration:
-                      _inputDecoration('Mois de période * (format YYYY-MM)'),
+                  controller: periodMonthController,
+                  onChanged: (value) {
+                    controller.periodMonth.value = value;
+                    autoFillAndRefresh();
+                  },
+                  decoration: _inputDecoration(
+                    'Mois de période * (format YYYY-MM)',
+                  ),
                   keyboardType: TextInputType.datetime,
                 ),
                 const SizedBox(height: 16),
@@ -316,37 +353,34 @@ class RapportsContent extends GetView<RapportsController> {
                 }),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.anomalies.value),
+                  controller: anomaliesController,
                   onChanged: (value) => controller.anomalies.value = value,
                   decoration: _inputDecoration('Anomalies (optionnel)'),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.interventionsDone.value),
+                  controller: interventionsDoneController,
                   onChanged: (value) =>
                       controller.interventionsDone.value = value,
-                  decoration:
-                      _inputDecoration('Interventions réalisées (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Interventions réalisées (optionnel)',
+                  ),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.totalExpensesText.value),
+                  controller: totalExpensesController,
                   onChanged: (value) =>
                       controller.totalExpensesText.value = value,
-                  decoration:
-                      _inputDecoration('Dépenses totales (optionnel)'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: _inputDecoration('Dépenses totales (optionnel)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.recommendations.value),
+                  controller: recommendationsController,
                   onChanged: (value) =>
                       controller.recommendations.value = value,
                   decoration: _inputDecoration('Recommandations (optionnel)'),
@@ -354,11 +388,11 @@ class RapportsContent extends GetView<RapportsController> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: TextEditingController(
-                      text: controller.nextActions.value),
+                  controller: nextActionsController,
                   onChanged: (value) => controller.nextActions.value = value,
-                  decoration:
-                      _inputDecoration('Prochaines actions (optionnel)'),
+                  decoration: _inputDecoration(
+                    'Prochaines actions (optionnel)',
+                  ),
                   maxLines: 3,
                 ),
                 Obx(() {

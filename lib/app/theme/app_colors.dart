@@ -7,6 +7,9 @@ class AppColors {
 
   static const Color primary = Color(0xFF1E7A4B);
   static const Color secondary = Color(0xFFE8792E);
+  // Variante sombre pour les textes orange sur fond clair.
+  static const Color secondaryText = Color(0xFF9C4715);
+  static const Color secondarySurface = Color(0xFFFFF0E5);
   static const Color background = Color(0xFFF5F7FA);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color textPrimary = Color(0xFF111827);

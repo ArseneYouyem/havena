@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -15,13 +16,10 @@ class AbonnementsContent extends GetView<AbonnementsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Abonnements',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Abonnements',
+            subtitle: 'Suivez les contrats et les abonnements de vos clients.',
+            icon: Icons.card_membership_outlined,
           ),
           const SizedBox(height: 16),
           Row(
@@ -76,10 +74,14 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.receipt_long,
-                            color: AppColors.primary, size: 20),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
                       title: Text(
                         abonnement.reference,
@@ -123,7 +125,9 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildPaymentStatusBadge(abonnement.paymentStatus),
-                          if (controller.isRenewalOrPaymentSoon(abonnement)) ...[
+                          if (controller.isRenewalOrPaymentSoon(
+                            abonnement,
+                          )) ...[
                             const SizedBox(width: 8),
                             const Tooltip(
                               message: 'Renouvellement ou paiement proche',
@@ -138,8 +142,10 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                           IconButton(
                             icon: const Icon(Icons.edit_outlined),
                             color: AppColors.textSecondary,
-                            onPressed: () => _showFormDialog(context,
-                                abonnement: abonnement),
+                            onPressed: () => _showFormDialog(
+                              context,
+                              abonnement: abonnement,
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
@@ -224,8 +230,7 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                     items: clientsList.map((client) {
                       return DropdownMenuItem<int?>(
                         value: client.id,
-                        child:
-                            Text('${client.fullName} (${client.reference})'),
+                        child: Text('${client.fullName} (${client.reference})'),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -243,7 +248,8 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                       return DropdownMenuItem<int?>(
                         value: logement.id,
                         child: Text(
-                            '${logement.reference} — ${logement.address}'),
+                          '${logement.reference} — ${logement.address}',
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -253,32 +259,38 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                 }),
                 const SizedBox(height: 16),
                 TextField(
-                  controller:
-                      TextEditingController(text: controller.formula.value),
+                  controller: TextEditingController(
+                    text: controller.formula.value,
+                  ),
                   onChanged: (value) => controller.formula.value = value,
                   decoration: _inputDecoration('Formule *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.monthlyPriceText.value),
+                    text: controller.monthlyPriceText.value,
+                  ),
                   onChanged: (value) =>
                       controller.monthlyPriceText.value = value,
                   decoration: _inputDecoration('Prix mensuel (FCFA) *'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildDateField('Date de début *', controller.startDate),
                 const SizedBox(height: 16),
                 _buildDateField(
-                    'Date de renouvellement', controller.renewalDate),
+                  'Date de renouvellement',
+                  controller.renewalDate,
+                ),
+                const SizedBox(height: 16),
+                _buildDateField('Dernier paiement', controller.lastPaymentDate),
                 const SizedBox(height: 16),
                 _buildDateField(
-                    'Dernier paiement', controller.lastPaymentDate),
-                const SizedBox(height: 16),
-                _buildDateField(
-                    'Prochain paiement', controller.nextPaymentDate),
+                  'Prochain paiement',
+                  controller.nextPaymentDate,
+                ),
                 const SizedBox(height: 16),
                 Obx(() {
                   return DropdownButtonFormField<PaymentStatus?>(
@@ -298,7 +310,8 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.observations.value),
+                    text: controller.observations.value,
+                  ),
                   onChanged: (value) => controller.observations.value = value,
                   decoration: _inputDecoration('Observations (optionnel)'),
                   maxLines: 3,

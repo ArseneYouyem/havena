@@ -25,6 +25,19 @@ class FinancesController extends GetxController {
   final prestataires = <Prestataire>[].obs;
   final searchQuery = ''.obs;
 
+  /// Filtres de la vue liste (retour utilisateur : filtres par type,
+  /// statut, client, prestataire). `null` = filtre désactivé (« Tous »).
+  final filterType = Rxn<TransactionType>();
+  final filterStatus = Rxn<TransactionStatus>();
+  final filterClientId = Rxn<int>();
+  final filterPrestataireId = Rxn<int>();
+
+  /// Drawer latéral (retour utilisateur : liste allégée, détails complets
+  /// affichés uniquement au clic) — même principe que les drawers
+  /// Clients/Logements.
+  final Rxn<int> selectedFinanceId = Rxn<int>();
+  void selectFinance(int? id) => selectedFinanceId.value = id;
+
   final editingId = Rxn<int>();
 
   final transactionDate = Rxn<DateTime>();
@@ -78,12 +91,32 @@ class FinancesController extends GetxController {
   double get solde => totalEntrees - totalSorties;
 
   List<Finance> visibleFinances() {
+    var list = finances.toList();
     final query = searchQuery.value.toLowerCase().trim();
-    if (query.isEmpty) return finances;
-    return finances.where((finance) {
-      return finance.reference.toLowerCase().contains(query) ||
-          finance.description.toLowerCase().contains(query);
-    }).toList();
+    if (query.isNotEmpty) {
+      list = list.where((finance) {
+        return finance.reference.toLowerCase().contains(query) ||
+            finance.description.toLowerCase().contains(query);
+      }).toList();
+    }
+    final type = filterType.value;
+    if (type != null) {
+      list = list.where((f) => f.transactionType == type).toList();
+    }
+    final status = filterStatus.value;
+    if (status != null) {
+      list = list.where((f) => f.status == status).toList();
+    }
+    final clientId = filterClientId.value;
+    if (clientId != null) {
+      list = list.where((f) => f.relatedClientId == clientId).toList();
+    }
+    final prestataireId = filterPrestataireId.value;
+    if (prestataireId != null) {
+      list =
+          list.where((f) => f.relatedPrestataireId == prestataireId).toList();
+    }
+    return list;
   }
 
   String clientLabelFor(int? clientId) {

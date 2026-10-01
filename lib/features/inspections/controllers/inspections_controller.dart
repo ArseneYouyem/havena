@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
@@ -16,17 +17,20 @@ class InspectionsController extends GetxController {
     required LogementsRepository logementsRepository,
     required PhotosRepository photosRepository,
     required SessionController sessionController,
+    required CalendrierRepository calendrierRepository,
   })  : _inspectionsRepository = inspectionsRepository,
         _inspectionItemsRepository = inspectionItemsRepository,
         _logementsRepository = logementsRepository,
         _photosRepository = photosRepository,
-        _sessionController = sessionController;
+        _sessionController = sessionController,
+        _calendrierRepository = calendrierRepository;
 
   final InspectionsRepository _inspectionsRepository;
   final InspectionItemsRepository _inspectionItemsRepository;
   final LogementsRepository _logementsRepository;
   final PhotosRepository _photosRepository;
   final SessionController _sessionController;
+  final CalendrierRepository _calendrierRepository;
 
   final Rxn<int> selectedInspectionId = Rxn<int>();
   final Rxn<Inspection> selectedInspection = Rxn<Inspection>();
@@ -35,6 +39,11 @@ class InspectionsController extends GetxController {
   final RxList<InspectionItem> inspectionItems = <InspectionItem>[].obs;
   final RxList<Photo> inspectionPhotos = <Photo>[].obs;
   final RxString searchQuery = ''.obs;
+
+  /// Filtres de la vue liste (retour utilisateur : filtres par logement et
+  /// statut). `null` = filtre désactivé (« Tous »).
+  final Rxn<int> filterLogementId = Rxn<int>();
+  final Rxn<bool> filterValidated = Rxn<bool>();
 
   StreamSubscription<List<Inspection>>? _inspectionsSub;
   StreamSubscription<List<Logement>>? _logementsSub;
@@ -111,12 +120,22 @@ class InspectionsController extends GetxController {
   }
 
   List<Inspection> get visibleInspections {
-    if (searchQuery.value.isEmpty) return inspections.toList();
-    return inspections
-        .where((i) => i.reference
-            .toLowerCase()
-            .contains(searchQuery.value.toLowerCase()))
-        .toList();
+    var list = inspections.toList();
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      list = list
+          .where((i) => i.reference.toLowerCase().contains(query))
+          .toList();
+    }
+    final logementId = filterLogementId.value;
+    if (logementId != null) {
+      list = list.where((i) => i.logementId == logementId).toList();
+    }
+    final validated = filterValidated.value;
+    if (validated != null) {
+      list = list.where((i) => i.isValidated == validated).toList();
+    }
+    return list;
   }
 
   Future<int> createInspection({
@@ -126,6 +145,15 @@ class InspectionsController extends GetxController {
     final id = await _inspectionsRepository.createWithChecklist(
       logementId: logementId,
       inspectionDate: inspectionDate,
+      updatedBy: _currentUserId(),
+    );
+    final logement = _findLogement(logementId);
+    await _calendrierRepository.create(
+      eventType: CalendarEventType.inspection,
+      title: 'Inspection — ${logement?.address ?? 'Logement'}',
+      eventDate: inspectionDate,
+      relatedReference: logement?.reference,
+      status: CalendarEventStatus.planifie,
       updatedBy: _currentUserId(),
     );
     selectInspection(id);

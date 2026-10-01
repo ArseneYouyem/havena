@@ -23,6 +23,10 @@ void main() {
       );
       expect(
         RolePermissions.canAccess(AppRole.coordinateur, AppRoutes.finances),
+        isFalse,
+      );
+      expect(
+        RolePermissions.canAccess(AppRole.coordinateur, AppRoutes.dashboard),
         isTrue,
       );
       expect(

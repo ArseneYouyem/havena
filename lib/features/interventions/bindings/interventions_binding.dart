@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
@@ -21,8 +22,11 @@ class InterventionsBinding extends Bindings {
         Get.find<PrestatairesRepository>(),
       ),
     );
-    // Nécessite que LogementsBinding, ClientsBinding et PrestatairesBinding
-    // soient également enregistrées sur la page pour fournir leurs repositories.
+    // Nécessite que LogementsBinding, ClientsBinding, PrestatairesBinding et
+    // CalendrierBinding soient également enregistrées sur la page
+    // (résolution paresseuse, voir ClientsBinding) : la création d'une
+    // intervention enregistre automatiquement son évènement dans le
+    // Calendrier.
     Get.lazyPut<InterventionsController>(
       () => InterventionsController(
         interventionsRepository: Get.find(),
@@ -31,6 +35,7 @@ class InterventionsBinding extends Bindings {
         prestatairesRepository: Get.find(),
         photosRepository: Get.find(),
         sessionController: Get.find<SessionController>(),
+        calendrierRepository: Get.find<CalendrierRepository>(),
       ),
     );
   }

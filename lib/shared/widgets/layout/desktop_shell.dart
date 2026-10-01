@@ -12,11 +12,9 @@ class DesktopShell extends StatelessWidget {
   const DesktopShell({
     super.key,
     required this.child,
-    this.title = 'HAVENA',
   });
 
   final Widget child;
-  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +26,7 @@ class DesktopShell extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _TopBar(title: title),
+                const _TopBar(),
                 Expanded(child: child),
               ],
             ),
@@ -40,11 +38,7 @@ class DesktopShell extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.title,
-  });
-
-  final String title;
+  const _TopBar();
 
   @override
   Widget build(BuildContext context) {
@@ -59,22 +53,6 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Image.asset(
-            'assets/splash.png',
-            height: 36,
-            width: 36,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(width: 32),
           const ReferenceSearchField(),
           const Spacer(),
           const SyncStatusIndicator(),

@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'dart:io' show File;
 
 import 'package:file_picker/file_picker.dart';
@@ -8,9 +9,16 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/inspections/inspection_checklist.dart';
 import 'package:havena/features/inspections/controllers/inspections_controller.dart';
+import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InspectionsContent extends GetView<InspectionsController> {
-  const InspectionsContent({super.key});
+  const InspectionsContent({super.key, this.onBack});
+
+  /// Permet de réutiliser cet écran détail hors de son propre onglet (ex.
+  /// drawer latéral depuis Logements) : par défaut, le bouton retour
+  /// désélectionne simplement l'inspection ; un appelant externe peut le
+  /// remplacer pour fermer son propre conteneur à la place.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +40,10 @@ class InspectionsContent extends GetView<InspectionsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Inspections',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Inspections',
+            subtitle: 'Suivez les visites et l’état des logements.',
+            icon: Icons.fact_check_outlined,
           ),
           const SizedBox(height: 16),
           Row(
@@ -64,11 +69,13 @@ class InspectionsContent extends GetView<InspectionsController> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildFiltersRow(context),
           const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               final list = controller.visibleInspections;
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
+              if (list.isEmpty && controller.inspections.isEmpty) {
                 return const Center(
                   child: Text(
                     'Aucune inspection',
@@ -92,13 +99,15 @@ class InspectionsContent extends GetView<InspectionsController> {
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
-                      onTap: () =>
-                          controller.selectInspection(inspection.id),
+                      onTap: () => controller.selectInspection(inspection.id),
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.assignment,
-                            color: AppColors.primary),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
+                        child: const Icon(
+                          Icons.assignment,
+                          color: AppColors.primary,
+                        ),
                       ),
                       title: Text(
                         inspection.reference,
@@ -147,6 +156,58 @@ class InspectionsContent extends GetView<InspectionsController> {
     );
   }
 
+  Widget _buildFiltersRow(BuildContext context) {
+    return Obx(() {
+      return Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterLogementId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Filtrer par logement'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les logements'),
+                ),
+                ...controller.logements.map((logement) {
+                  return DropdownMenuItem<int?>(
+                    value: logement.id,
+                    child: Text(
+                      logement.address,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterLogementId.value = value,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: DropdownButtonFormField<bool?>(
+              initialValue: controller.filterValidated.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Filtrer par statut'),
+              items: const [
+                DropdownMenuItem<bool?>(
+                  value: null,
+                  child: Text('Tous les statuts'),
+                ),
+                DropdownMenuItem<bool?>(value: true, child: Text('Validée')),
+                DropdownMenuItem<bool?>(
+                  value: false,
+                  child: Text('Brouillon'),
+                ),
+              ],
+              onChanged: (value) => controller.filterValidated.value = value,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // VUE DÉTAIL
   // ---------------------------------------------------------------------------
@@ -167,7 +228,7 @@ class InspectionsContent extends GetView<InspectionsController> {
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   color: AppColors.textPrimary,
-                  onPressed: () => controller.selectInspection(null),
+                  onPressed: onBack ?? () => controller.selectInspection(null),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -249,21 +310,36 @@ class InspectionsContent extends GetView<InspectionsController> {
           ...InspectionCategory.values.map((category) {
             final catItems = grouped[category] ?? [];
             if (catItems.isEmpty) return const SizedBox.shrink();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  InspectionChecklist.categoryLabels[category]!,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Card(
+                elevation: 0,
+                color: AppColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        InspectionChecklist.categoryLabels[category]!,
+                        style: const TextStyle(
+                          color: AppColors.secondaryText,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 8),
+                      ...catItems.map((item) => _buildItemRow(context, item)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...catItems.map((item) => _buildItemRow(context, item)),
-                const SizedBox(height: 16),
-              ],
+              ),
             );
           }),
         ],
@@ -275,38 +351,9 @@ class InspectionsContent extends GetView<InspectionsController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.label,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                ),
-              ),
-              _buildStatusChip(
-                label: 'OK',
-                selected: item.isOk == true,
-                color: AppColors.success,
-                onTap: () => controller.updateItemStatus(item.id, true),
-              ),
-              const SizedBox(width: 8),
-              _buildStatusChip(
-                label: 'Problème',
-                selected: item.isOk == false,
-                color: AppColors.error,
-                onTap: () => controller.updateItemStatus(item.id, false),
-              ),
-              const SizedBox(width: 8),
-              _buildStatusChip(
-                label: 'Non vérifié',
-                selected: item.isOk == null,
-                color: AppColors.textSecondary,
-                onTap: () => controller.updateItemStatus(item.id, null),
-              ),
-            ],
-          ),
+        _ChecklistItemRow(
+          item: item,
+          onStatusTap: (isOk) => controller.updateItemStatus(item.id, isOk),
         ),
         if (item.isOk == false)
           Padding(
@@ -318,33 +365,6 @@ class InspectionsContent extends GetView<InspectionsController> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildStatusChip({
-    required String label,
-    required bool selected,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? color : AppColors.border),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? color : AppColors.textSecondary,
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
     );
   }
 
@@ -390,20 +410,32 @@ class InspectionsContent extends GetView<InspectionsController> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(photo.localFilePath),
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 120,
-                          height: 120,
-                          color: AppColors.background,
-                          child: const Icon(Icons.broken_image,
-                              color: AppColors.textSecondary),
-                        );
-                      },
+                    child: GestureDetector(
+                      onTap: () => showPhotoPreview(
+                        context,
+                        controller.inspectionPhotos
+                            .map((p) => p.localFilePath)
+                            .toList(),
+                        initialIndex:
+                            controller.inspectionPhotos.indexOf(photo),
+                      ),
+                      child: Image.file(
+                        File(photo.localFilePath),
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 120,
+                            height: 120,
+                            color: AppColors.background,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: AppColors.textSecondary,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   Positioned(
@@ -435,9 +467,7 @@ class InspectionsContent extends GetView<InspectionsController> {
   }
 
   Future<void> _pickAndAddPhotos(BuildContext context) async {
-    final files = await FilePicker.pickFiles(
-      type: FileType.image,
-    );
+    final files = await FilePicker.pickFiles(type: FileType.image);
     final paths = files.map((f) => f.path).whereType<String>().toList();
     if (paths.isNotEmpty) {
       await controller.addPhotos(paths);
@@ -445,7 +475,9 @@ class InspectionsContent extends GetView<InspectionsController> {
   }
 
   Widget _buildRecommendationsField(
-      BuildContext context, Inspection inspection) {
+    BuildContext context,
+    Inspection inspection,
+  ) {
     return _RecommendationsField(
       initialValue: inspection.recommendations ?? '',
       onChanged: (value) => controller.updateRecommendations(value),
@@ -579,7 +611,10 @@ class InspectionsContent extends GetView<InspectionsController> {
   // HELPERS
   // ---------------------------------------------------------------------------
   Widget _buildDateField(
-      BuildContext context, String label, Rxn<DateTime> dateField) {
+    BuildContext context,
+    String label,
+    Rxn<DateTime> dateField,
+  ) {
     return InkWell(
       onTap: () async {
         final initial = dateField.value ?? DateTime.now();
@@ -691,11 +726,99 @@ class InspectionsContent extends GetView<InspectionsController> {
   }
 }
 
+/// Ligne de checklist avec surbrillance au survol (souris desktop) — sans
+/// elle, il n'y a aucun repère visuel indiquant à quel libellé (ex.
+/// « Robinets ») se rapportent les boutons OK/Problème/Non vérifié
+/// affichés à droite, repéré par l'utilisateur comme difficile à suivre.
+class _ChecklistItemRow extends StatefulWidget {
+  const _ChecklistItemRow({required this.item, required this.onStatusTap});
+
+  final InspectionItem item;
+  final ValueChanged<bool?> onStatusTap;
+
+  @override
+  State<_ChecklistItemRow> createState() => _ChecklistItemRowState();
+}
+
+class _ChecklistItemRowState extends State<_ChecklistItemRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _hovered ? AppColors.secondarySurface : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                item.label,
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+            ),
+            _buildStatusChip(
+              label: 'OK',
+              selected: item.isOk == true,
+              color: AppColors.success,
+              onTap: () => widget.onStatusTap(true),
+            ),
+            const SizedBox(width: 8),
+            _buildStatusChip(
+              label: 'Problème',
+              selected: item.isOk == false,
+              color: AppColors.error,
+              onTap: () => widget.onStatusTap(false),
+            ),
+            const SizedBox(width: 8),
+            _buildStatusChip(
+              label: 'Non vérifié',
+              selected: item.isOk == null,
+              color: AppColors.textSecondary,
+              onTap: () => widget.onStatusTap(null),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip({
+    required String label,
+    required bool selected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? color : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? color : AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ObservationField extends StatefulWidget {
-  const _ObservationField({
-    required this.item,
-    required this.onChanged,
-  });
+  const _ObservationField({required this.item, required this.onChanged});
 
   final InspectionItem item;
   final ValueChanged<String> onChanged;
@@ -752,8 +875,10 @@ class _ObservationFieldState extends State<_ObservationField> {
           focusedBorder: const OutlineInputBorder(
             borderSide: BorderSide(color: AppColors.primary),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
         ),
         maxLines: 2,
         minLines: 1,

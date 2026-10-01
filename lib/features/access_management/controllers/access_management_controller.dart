@@ -24,6 +24,18 @@ class AccessManagementController extends GetxController {
   final isCreating = false.obs;
   final Rxn<String> formError = Rxn<String>();
 
+  final Rxn<UserAccount> editingUser = Rxn<UserAccount>();
+  final editFullName = ''.obs;
+  final Rxn<AppRole> editRole = Rxn<AppRole>();
+  final isEditing = false.obs;
+  final Rxn<String> editFormError = Rxn<String>();
+
+  /// Un compte ne peut jamais modifier/désactiver sa propre ligne (même
+  /// garde-fou que `firestore.rules` : `request.auth.uid != uid` sur
+  /// `update`) — évite une tentative vouée à échouer côté serveur.
+  bool isSelf(UserAccount user) =>
+      user.uid == _sessionController.session.value?.uid;
+
   @override
   void onInit() {
     super.onInit();
@@ -71,6 +83,51 @@ class AccessManagementController extends GetxController {
       formError.value = e.toString().replaceFirst('Exception: ', '');
     } finally {
       isCreating.value = false;
+    }
+  }
+
+  void openEditDialog(UserAccount user) {
+    editingUser.value = user;
+    editFullName.value = user.fullName;
+    editRole.value = user.role;
+    editFormError.value = null;
+  }
+
+  Future<void> submitEdit() async {
+    final user = editingUser.value;
+    if (user == null) return;
+    if (editFullName.value.trim().isEmpty || editRole.value == null) {
+      editFormError.value = 'Tous les champs sont requis.';
+      return;
+    }
+
+    isEditing.value = true;
+    editFormError.value = null;
+    try {
+      await _authRepository.updateAdministrator(
+        uid: user.uid,
+        fullName: editFullName.value.trim(),
+        role: editRole.value!,
+      );
+      await loadUsers();
+      editingUser.value = null;
+    } catch (e) {
+      editFormError.value = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      isEditing.value = false;
+    }
+  }
+
+  Future<void> toggleActive(UserAccount user) async {
+    if (isSelf(user)) return;
+    try {
+      await _authRepository.setAdministratorActive(
+        uid: user.uid,
+        active: !user.active,
+      );
+      await loadUsers();
+    } catch (e) {
+      formError.value = e.toString().replaceFirst('Exception: ', '');
     }
   }
 }

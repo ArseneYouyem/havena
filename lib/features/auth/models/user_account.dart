@@ -50,9 +50,20 @@ class UserAccount {
       email: map['email'] as String? ?? '',
       fullName: map['fullName'] as String? ?? '',
       role: AppRole.values.byName(map['role'] as String),
-      active: map['active'] as bool? ?? true,
+      active: _parseActive(map['active']),
       createdAt: createdAt,
       createdBy: map['createdBy'] as String?,
     );
+  }
+
+  /// Tolère un champ `active` saisi comme texte ("true"/"false") plutôt que
+  /// comme un vrai booléen Firestore — piège classique lors de la création
+  /// manuelle du tout premier compte Fondatrice via la console Firebase
+  /// (voir CLAUDE.md, section « Authentification et rôles », bootstrap
+  /// manuel).
+  static bool _parseActive(Object? value) {
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true';
+    return true;
   }
 }

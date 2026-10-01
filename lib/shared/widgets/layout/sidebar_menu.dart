@@ -84,14 +84,25 @@ class SidebarMenu extends StatelessWidget {
             height: 64,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerLeft,
-            child: const Text(
-              'HAVENA',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: AppColors.textPrimary,
-              ),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/splash.png',
+                  height: 32,
+                  width: 32,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'HAVENA',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
@@ -104,8 +115,8 @@ class SidebarMenu extends StatelessWidget {
               final visibleItems = role == null
                   ? const <_MenuItem>[]
                   : _items
-                      .where((item) => session.canAccess(item.route))
-                      .toList();
+                        .where((item) => session.canAccess(item.route))
+                        .toList();
               return ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: visibleItems
@@ -138,10 +149,7 @@ class _MenuItem {
 }
 
 class _SidebarMenuItem extends StatelessWidget {
-  const _SidebarMenuItem({
-    required this.item,
-    required this.isActive,
-  });
+  const _SidebarMenuItem({required this.item, required this.isActive});
 
   final _MenuItem item;
   final bool isActive;
@@ -159,20 +167,12 @@ class _SidebarMenuItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () =>
-              Get.find<NavigationController>().changeTo(item.route),
+          onTap: () => Get.find<NavigationController>().changeTo(item.route),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                Icon(
-                  item.icon,
-                  size: 20,
-                  color: color,
-                ),
+                Icon(item.icon, size: 20, color: color),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

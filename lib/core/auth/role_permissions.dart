@@ -27,7 +27,9 @@ class RolePermissions {
       AppRoutes.inspections,
       AppRoutes.interventions,
       AppRoutes.prestataires,
-      AppRoutes.finances,
+      // AppRoutes.finances : retiré (retour utilisateur) — seule la
+      // Fondatrice voit les finances, y compris les cards du tableau de
+      // bord (voir DashboardController.isFondatrice/dashboard_view.dart).
       AppRoutes.rapports,
       AppRoutes.documents,
       AppRoutes.calendrier,

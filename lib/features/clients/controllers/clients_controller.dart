@@ -4,15 +4,29 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/logements/repositories/logements_repository.dart';
 
 class ClientsController extends GetxController {
-  ClientsController(this._repository, this._sessionController);
+  ClientsController(
+    this._repository,
+    this._sessionController,
+    this._logementsRepository,
+  );
 
   final ClientsRepository _repository;
   final SessionController _sessionController;
+  final LogementsRepository _logementsRepository;
 
   final clients = <Client>[].obs;
+  final _logements = <Logement>[].obs;
   final searchQuery = ''.obs;
+
+  /// Drawer latéral (retour utilisateur) : détails du client + logements
+  /// enregistrés pour lui, affichés sans quitter l'onglet Clients — même
+  /// principe que le drawer Inspections/Interventions de la page Logements.
+  final Rxn<int> selectedClientId = Rxn<int>();
+
+  StreamSubscription<List<Logement>>? _logementsSub;
 
   final editingId = Rxn<int>();
 
@@ -42,12 +56,22 @@ class ClientsController extends GetxController {
     _clientsSub = _repository.watchAll().listen((data) {
       clients.value = data;
     });
+    _logementsSub = _logementsRepository.watchAll().listen((data) {
+      _logements.value = data;
+    });
   }
 
   @override
   void onClose() {
     _clientsSub?.cancel();
+    _logementsSub?.cancel();
     super.onClose();
+  }
+
+  void selectClient(int? id) => selectedClientId.value = id;
+
+  List<Logement> logementsForClient(int clientId) {
+    return _logements.where((l) => l.clientId == clientId).toList();
   }
 
   List<Client> visibleClients() {

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
@@ -18,12 +19,14 @@ class InterventionsController extends GetxController {
     required PrestatairesRepository prestatairesRepository,
     required PhotosRepository photosRepository,
     required SessionController sessionController,
+    required CalendrierRepository calendrierRepository,
   })  : _interventionsRepository = interventionsRepository,
         _logementsRepository = logementsRepository,
         _clientsRepository = clientsRepository,
         _prestatairesRepository = prestatairesRepository,
         _photosRepository = photosRepository,
-        _sessionController = sessionController;
+        _sessionController = sessionController,
+        _calendrierRepository = calendrierRepository;
 
   final InterventionsRepository _interventionsRepository;
   final LogementsRepository _logementsRepository;
@@ -31,6 +34,7 @@ class InterventionsController extends GetxController {
   final PrestatairesRepository _prestatairesRepository;
   final PhotosRepository _photosRepository;
   final SessionController _sessionController;
+  final CalendrierRepository _calendrierRepository;
 
   final Rxn<int> selectedInterventionId = Rxn<int>();
   final Rxn<Intervention> selectedIntervention = Rxn<Intervention>();
@@ -42,6 +46,13 @@ class InterventionsController extends GetxController {
   final RxList<Photo> afterPhotos = <Photo>[].obs;
   final RxString searchQuery = ''.obs;
   final formError = Rxn<String>();
+
+  /// Filtres de la vue liste (retour utilisateur : filtres par logement,
+  /// client, statut, urgence). `null` = filtre désactivé (« Tous »).
+  final Rxn<int> filterLogementId = Rxn<int>();
+  final Rxn<int> filterClientId = Rxn<int>();
+  final Rxn<InterventionStatus> filterStatus = Rxn<InterventionStatus>();
+  final Rxn<UrgencyLevel> filterUrgency = Rxn<UrgencyLevel>();
 
   StreamSubscription<List<Intervention>>? _interventionsSub;
   StreamSubscription<List<Logement>>? _logementsSub;
@@ -156,13 +167,32 @@ class InterventionsController extends GetxController {
   }
 
   List<Intervention> get visibleInterventions {
-    if (searchQuery.value.isEmpty) return interventions.toList();
-    final query = searchQuery.value.toLowerCase();
-    return interventions
-        .where((i) =>
-            i.reference.toLowerCase().contains(query) ||
-            i.problemDescription.toLowerCase().contains(query))
-        .toList();
+    var list = interventions.toList();
+    if (searchQuery.value.isNotEmpty) {
+      final query = searchQuery.value.toLowerCase();
+      list = list
+          .where((i) =>
+              i.reference.toLowerCase().contains(query) ||
+              i.problemDescription.toLowerCase().contains(query))
+          .toList();
+    }
+    final logementId = filterLogementId.value;
+    if (logementId != null) {
+      list = list.where((i) => i.logementId == logementId).toList();
+    }
+    final clientId = filterClientId.value;
+    if (clientId != null) {
+      list = list.where((i) => i.clientId == clientId).toList();
+    }
+    final status = filterStatus.value;
+    if (status != null) {
+      list = list.where((i) => i.status == status).toList();
+    }
+    final urgency = filterUrgency.value;
+    if (urgency != null) {
+      list = list.where((i) => i.urgencyLevel == urgency).toList();
+    }
+    return list;
   }
 
   Future<int?> createIntervention({
@@ -187,6 +217,14 @@ class InterventionsController extends GetxController {
       category: category,
       urgencyLevel: urgencyLevel,
       prestataireId: prestataireId,
+      updatedBy: _currentUserId(),
+    );
+    await _calendrierRepository.create(
+      eventType: CalendarEventType.intervention,
+      title: 'Intervention — ${logement?.address ?? problemDescription}',
+      eventDate: DateTime.now(),
+      relatedReference: logement?.reference,
+      status: CalendarEventStatus.planifie,
       updatedBy: _currentUserId(),
     );
     selectIntervention(id);

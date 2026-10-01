@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'dart:io' show File;
 
 import 'package:file_picker/file_picker.dart';
@@ -7,9 +8,16 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
+import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InterventionsContent extends GetView<InterventionsController> {
-  const InterventionsContent({super.key});
+  const InterventionsContent({super.key, this.onBack});
+
+  /// Permet de réutiliser cet écran détail hors de son propre onglet (ex.
+  /// drawer latéral depuis Logements) : par défaut, le bouton retour
+  /// désélectionne simplement l'intervention ; un appelant externe peut le
+  /// remplacer pour fermer son propre conteneur à la place.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +39,10 @@ class InterventionsContent extends GetView<InterventionsController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Interventions',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Interventions',
+            subtitle: 'Pilotez les travaux et leur avancement.',
+            icon: Icons.build_outlined,
           ),
           const SizedBox(height: 16),
           Row(
@@ -63,11 +68,13 @@ class InterventionsContent extends GetView<InterventionsController> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildFiltersRow(context),
           const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               final list = controller.visibleInterventions;
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
+              if (list.isEmpty && controller.interventions.isEmpty) {
                 return const Center(
                   child: Text(
                     'Aucune intervention',
@@ -94,10 +101,13 @@ class InterventionsContent extends GetView<InterventionsController> {
                       onTap: () =>
                           controller.selectIntervention(intervention.id),
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.build,
-                            color: AppColors.primary),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
+                        child: const Icon(
+                          Icons.build,
+                          color: AppColors.primary,
+                        ),
                       ),
                       title: Text(
                         intervention.reference,
@@ -116,7 +126,9 @@ class InterventionsContent extends GetView<InterventionsController> {
                             ),
                           ),
                           Text(
-                            controller.logementLabelFor(intervention.logementId),
+                            controller.logementLabelFor(
+                              intervention.logementId,
+                            ),
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -150,6 +162,104 @@ class InterventionsContent extends GetView<InterventionsController> {
     );
   }
 
+  Widget _buildFiltersRow(BuildContext context) {
+    return Obx(() {
+      return Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterLogementId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Logement'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les logements'),
+                ),
+                ...controller.logements.map((logement) {
+                  return DropdownMenuItem<int?>(
+                    value: logement.id,
+                    child: Text(
+                      logement.address,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterLogementId.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterClientId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Client'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les clients'),
+                ),
+                ...controller.clients.map((client) {
+                  return DropdownMenuItem<int?>(
+                    value: client.id,
+                    child: Text(
+                      client.fullName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterClientId.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<InterventionStatus?>(
+              initialValue: controller.filterStatus.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Statut'),
+              items: [
+                const DropdownMenuItem<InterventionStatus?>(
+                  value: null,
+                  child: Text('Tous les statuts'),
+                ),
+                ...InterventionStatus.values.map((status) {
+                  return DropdownMenuItem<InterventionStatus?>(
+                    value: status,
+                    child: Text(status.name),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterStatus.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<UrgencyLevel?>(
+              initialValue: controller.filterUrgency.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Urgence'),
+              items: [
+                const DropdownMenuItem<UrgencyLevel?>(
+                  value: null,
+                  child: Text('Toutes urgences'),
+                ),
+                ...UrgencyLevel.values.map((urgency) {
+                  return DropdownMenuItem<UrgencyLevel?>(
+                    value: urgency,
+                    child: Text(urgency.name),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterUrgency.value = value,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // VUE DÉTAIL
   // ---------------------------------------------------------------------------
@@ -170,7 +280,8 @@ class InterventionsContent extends GetView<InterventionsController> {
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   color: AppColors.textPrimary,
-                  onPressed: () => controller.selectIntervention(null),
+                  onPressed:
+                      onBack ?? () => controller.selectIntervention(null),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -184,25 +295,81 @@ class InterventionsContent extends GetView<InterventionsController> {
               ],
             ),
             const SizedBox(height: 20),
-            _buildInformationsSection(intervention),
-            const SizedBox(height: 24),
-            _buildPrestataireSection(intervention),
-            const SizedBox(height: 24),
-            _buildDevisSection(intervention),
-            const SizedBox(height: 24),
-            _buildPlanificationSection(intervention),
-            const SizedBox(height: 24),
-            _buildMontantsSection(intervention),
-            const SizedBox(height: 24),
-            _buildStatutSection(intervention),
-            const SizedBox(height: 24),
-            _buildSatisfactionSection(intervention),
-            const SizedBox(height: 24),
-            _buildPhotosSection(context),
+            _buildSectionCard(
+              title: 'Informations',
+              child: _buildInformationsSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Prestataire',
+              child: _buildPrestataireSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Devis',
+              child: _buildDevisSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Planification',
+              child: _buildPlanificationSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Montants & marge',
+              child: _buildMontantsSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Statut',
+              child: _buildStatutSection(intervention),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(child: _buildSatisfactionSection(intervention)),
+            const SizedBox(height: 16),
+            _buildSectionCard(child: _buildPhotosSection(context)),
           ],
         ),
       );
     });
+  }
+
+  /// Regroupe chaque section du formulaire dans une carte avec bordure —
+  /// sans elle, les sections (Informations, Prestataire, Devis...) se
+  /// suivaient sans séparation visuelle, difficile à distinguer (retour
+  /// utilisateur). [title] est omis pour les sections qui affichent déjà
+  /// leur propre titre en interne (Satisfaction client, Photos).
+  Widget _buildSectionCard({String? title, required Widget child}) {
+    return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title != null) ...[
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.secondaryText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 12),
+            ],
+            child,
+          ],
+        ),
+      ),
+    );
   }
 
   // 1. Informations
@@ -277,10 +444,7 @@ class InterventionsContent extends GetView<InterventionsController> {
       initialValue: intervention.prestataireId,
       decoration: _inputDecoration('Prestataire'),
       items: [
-        const DropdownMenuItem<int?>(
-          value: null,
-          child: Text('Non assigné'),
-        ),
+        const DropdownMenuItem<int?>(value: null, child: Text('Non assigné')),
         ...controller.prestataires.map((prestataire) {
           return DropdownMenuItem<int?>(
             value: prestataire.id,
@@ -350,11 +514,14 @@ class InterventionsContent extends GetView<InterventionsController> {
               child: _InterventionTextField(
                 label: 'Montant client (FCFA)',
                 initialValue: intervention.clientAmount?.toString() ?? '',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 onChanged: (value) {
                   final current = controller.selectedIntervention.value;
-                  final clientAmount = double.tryParse(value.replaceAll(',', '.'));
+                  final clientAmount = double.tryParse(
+                    value.replaceAll(',', '.'),
+                  );
                   controller.updateAmounts(
                     clientAmount: clientAmount,
                     prestataireAmount: current?.prestataireAmount,
@@ -367,12 +534,14 @@ class InterventionsContent extends GetView<InterventionsController> {
               child: _InterventionTextField(
                 label: 'Montant prestataire (FCFA)',
                 initialValue: intervention.prestataireAmount?.toString() ?? '',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 onChanged: (value) {
                   final current = controller.selectedIntervention.value;
-                  final prestataireAmount =
-                      double.tryParse(value.replaceAll(',', '.'));
+                  final prestataireAmount = double.tryParse(
+                    value.replaceAll(',', '.'),
+                  );
                   controller.updateAmounts(
                     clientAmount: current?.clientAmount,
                     prestataireAmount: prestataireAmount,
@@ -435,8 +604,8 @@ class InterventionsContent extends GetView<InterventionsController> {
         Row(
           children: List.generate(5, (index) {
             final starValue = index + 1;
-            final selected = currentSatisfaction != null &&
-                currentSatisfaction >= starValue;
+            final selected =
+                currentSatisfaction != null && currentSatisfaction >= starValue;
             return IconButton(
               icon: Icon(
                 selected ? Icons.star : Icons.star_border,
@@ -444,8 +613,9 @@ class InterventionsContent extends GetView<InterventionsController> {
                 size: 32,
               ),
               onPressed: () {
-                final newValue =
-                    (currentSatisfaction == starValue) ? null : starValue;
+                final newValue = (currentSatisfaction == starValue)
+                    ? null
+                    : starValue;
                 controller.updateSatisfaction(clientSatisfaction: newValue);
               },
             );
@@ -533,20 +703,29 @@ class InterventionsContent extends GetView<InterventionsController> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(photo.localFilePath),
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 120,
-                          height: 120,
-                          color: AppColors.background,
-                          child: const Icon(Icons.broken_image,
-                              color: AppColors.textSecondary),
-                        );
-                      },
+                    child: GestureDetector(
+                      onTap: () => showPhotoPreview(
+                        context,
+                        photos.map((p) => p.localFilePath).toList(),
+                        initialIndex: photos.indexOf(photo),
+                      ),
+                      child: Image.file(
+                        File(photo.localFilePath),
+                        width: 120,
+                        height: 120,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 120,
+                            height: 120,
+                            color: AppColors.background,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: AppColors.textSecondary,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   Positioned(
@@ -578,9 +757,7 @@ class InterventionsContent extends GetView<InterventionsController> {
   }
 
   Future<void> _pickAndAddPhotos(BuildContext context, bool isBefore) async {
-    final files = await FilePicker.pickFiles(
-      type: FileType.image,
-    );
+    final files = await FilePicker.pickFiles(type: FileType.image);
     final paths = files.map((f) => f.path).whereType<String>().toList();
     if (paths.isNotEmpty) {
       await controller.addPhotos(paths, isBefore: isBefore);
@@ -591,9 +768,7 @@ class InterventionsContent extends GetView<InterventionsController> {
   // DIALOG DE CRÉATION
   // ---------------------------------------------------------------------------
   void _showCreateInterventionDialog(BuildContext context) {
-    Get.dialog(
-      const _CreateInterventionDialog(),
-    );
+    Get.dialog(const _CreateInterventionDialog());
   }
 
   // ---------------------------------------------------------------------------

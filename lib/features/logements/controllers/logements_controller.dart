@@ -4,19 +4,47 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/inspections/controllers/inspections_controller.dart';
+import 'package:havena/features/inspections/repositories/inspections_repository.dart';
+import 'package:havena/features/interventions/controllers/interventions_controller.dart';
+import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 
 class LogementsController extends GetxController {
   LogementsController(
-      this._repository, this._clientsRepository, this._sessionController);
+    this._repository,
+    this._clientsRepository,
+    this._sessionController,
+    this._inspectionsRepository,
+    this._interventionsRepository,
+  );
 
   final LogementsRepository _repository;
   final ClientsRepository _clientsRepository;
   final SessionController _sessionController;
+  final InspectionsRepository _inspectionsRepository;
+  final InterventionsRepository _interventionsRepository;
 
   final logements = <Logement>[].obs;
   final clients = <Client>[].obs;
   final searchQuery = ''.obs;
+
+  /// Logement affiché en vue détail (liste des inspections/interventions
+  /// liées) — même principe « bascule interne liste/détail » que
+  /// Inspections/Interventions, voir CLAUDE.md.
+  final Rxn<int> selectedLogementId = Rxn<int>();
+  final _inspections = <Inspection>[].obs;
+  final _interventions = <Intervention>[].obs;
+
+  /// Drawer latéral (retour utilisateur) : contrairement à
+  /// `selectedLogementId`, ceci ne bascule PAS la sidebar vers les modules
+  /// Inspections/Interventions — ça pilote uniquement un panneau qui reste
+  /// affiché par-dessus l'onglet Logements (voir `LogementsContent`).
+  final Rxn<int> drawerInspectionId = Rxn<int>();
+  final Rxn<int> drawerInterventionId = Rxn<int>();
+
+  StreamSubscription<List<Inspection>>? _inspectionsSub;
+  StreamSubscription<List<Intervention>>? _interventionsSub;
 
   final editingId = Rxn<int>();
 
@@ -48,13 +76,60 @@ class LogementsController extends GetxController {
     _clientsSub = _clientsRepository.watchAll().listen((data) {
       clients.value = data;
     });
+    _inspectionsSub = _inspectionsRepository.watchAll().listen((data) {
+      _inspections.value = data;
+    });
+    _interventionsSub = _interventionsRepository.watchAll().listen((data) {
+      _interventions.value = data;
+    });
   }
 
   @override
   void onClose() {
     _logementsSub?.cancel();
     _clientsSub?.cancel();
+    _inspectionsSub?.cancel();
+    _interventionsSub?.cancel();
     super.onClose();
+  }
+
+  void selectLogement(int? id) => selectedLogementId.value = id;
+
+  List<Inspection> inspectionsForSelected() {
+    final id = selectedLogementId.value;
+    if (id == null) return [];
+    final list = _inspections.where((i) => i.logementId == id).toList();
+    list.sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
+    return list;
+  }
+
+  List<Intervention> interventionsForSelected() {
+    final id = selectedLogementId.value;
+    if (id == null) return [];
+    final list = _interventions.where((i) => i.logementId == id).toList();
+    list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return list;
+  }
+
+  /// Ouvre l'inspection dans un drawer latéral qui reprend l'écran détail
+  /// complet du module Inspections (checklist, photos...), sans quitter
+  /// l'onglet Logements (retour utilisateur : la bascule de sidebar
+  /// précédemment utilisée n'était pas souhaitée).
+  void openInspectionDetail(int inspectionId) {
+    Get.find<InspectionsController>().selectInspection(inspectionId);
+    drawerInterventionId.value = null;
+    drawerInspectionId.value = inspectionId;
+  }
+
+  void openInterventionDetail(int interventionId) {
+    Get.find<InterventionsController>().selectIntervention(interventionId);
+    drawerInspectionId.value = null;
+    drawerInterventionId.value = interventionId;
+  }
+
+  void closeDrawer() {
+    drawerInspectionId.value = null;
+    drawerInterventionId.value = null;
   }
 
   List<Logement> visibleLogements() {

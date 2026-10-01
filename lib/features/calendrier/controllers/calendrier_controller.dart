@@ -14,6 +14,16 @@ class CalendrierController extends GetxController {
   final events = <CalendrierEvenement>[].obs;
   final searchQuery = ''.obs;
 
+  /// Vue calendrier (retour utilisateur) : `selectedDay` == null par défaut
+  /// -> la liste de droite affiche tous les événements ; un jour sélectionné
+  /// la filtre à ce seul jour. `visibleMonth` pilote uniquement la grille
+  /// affichée (navigation mois précédent/suivant), indépendamment de la
+  /// sélection.
+  final Rxn<DateTime> selectedDay = Rxn<DateTime>();
+  final Rxn<DateTime> visibleMonth = Rxn<DateTime>(
+    DateTime(DateTime.now().year, DateTime.now().month),
+  );
+
   final editingId = Rxn<int>();
 
   final eventType = Rxn<CalendarEventType>();
@@ -52,9 +62,45 @@ class CalendrierController extends GetxController {
   }
 
   List<CalendrierEvenement> sortedEvents() {
-    final visible = visibleEvents();
+    // Le tri est utilisé pendant le build : ne pas modifier la RxList source.
+    final visible = visibleEvents().toList();
     visible.sort((a, b) => a.eventDate.compareTo(b.eventDate));
     return visible;
+  }
+
+  /// Événements affichés dans le panneau de droite : tous les événements
+  /// (recherche appliquée) si aucun jour n'est sélectionné, sinon limités
+  /// au jour sélectionné.
+  List<CalendrierEvenement> displayedEvents() {
+    final list = sortedEvents();
+    final day = selectedDay.value;
+    if (day == null) return list;
+    return list.where((event) => _isSameDay(event.eventDate, day)).toList();
+  }
+
+  bool hasEventOn(DateTime day) {
+    return events.any((event) => _isSameDay(event.eventDate, day));
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  void selectDay(DateTime? day) {
+    selectedDay.value =
+        day == null ? null : DateTime(day.year, day.month, day.day);
+  }
+
+  void goToPreviousMonth() {
+    final month = visibleMonth.value ??
+        DateTime(DateTime.now().year, DateTime.now().month);
+    visibleMonth.value = DateTime(month.year, month.month - 1);
+  }
+
+  void goToNextMonth() {
+    final month = visibleMonth.value ??
+        DateTime(DateTime.now().year, DateTime.now().month);
+    visibleMonth.value = DateTime(month.year, month.month + 1);
   }
 
   List<CalendrierEvenement> get todayEvents {

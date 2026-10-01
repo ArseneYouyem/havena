@@ -9,14 +9,15 @@ class LoginController extends GetxController {
   LoginController({
     required AuthRepository authRepository,
     required SessionController sessionController,
-  })  : _authRepository = authRepository,
-        _sessionController = sessionController;
+  }) : _authRepository = authRepository,
+       _sessionController = sessionController;
 
   final AuthRepository _authRepository;
   final SessionController _sessionController;
 
   final email = ''.obs;
   final password = ''.obs;
+  final isPasswordVisible = false.obs;
   final isLoading = false.obs;
   final errorMessage = Rxn<String>();
 

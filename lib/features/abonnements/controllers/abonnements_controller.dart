@@ -4,7 +4,9 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/abonnements/repositories/abonnements_repository.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/calendrier/repositories/calendrier_repository.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/finances/repositories/finances_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
 
 class AbonnementsController extends GetxController {
@@ -13,17 +15,34 @@ class AbonnementsController extends GetxController {
     this._clientsRepository,
     this._logementsRepository,
     this._sessionController,
+    this._financesRepository,
+    this._calendrierRepository,
   );
 
   final AbonnementsRepository _repository;
   final ClientsRepository _clientsRepository;
   final LogementsRepository _logementsRepository;
   final SessionController _sessionController;
+  final FinancesRepository _financesRepository;
+  final CalendrierRepository _calendrierRepository;
 
   final abonnements = <Abonnement>[].obs;
   final clients = <Client>[].obs;
   final logements = <Logement>[].obs;
   final searchQuery = ''.obs;
+
+  /// Filtres + tri de la vue liste (retour utilisateur) : tri par date de
+  /// renouvellement la plus proche en premier (`null` en dernier), filtres
+  /// par client/logement/statut combinables avec la recherche texte.
+  final filterClientId = Rxn<int>();
+  final filterLogementId = Rxn<int>();
+  final filterStatus = Rxn<PaymentStatus>();
+
+  /// Drawer latéral (retour utilisateur) : détails de l'abonnement cliqué,
+  /// avec un bouton « Renouveler » qui préremplit le formulaire de création
+  /// pour un NOUVEL abonnement (jamais une modification de l'existant).
+  final Rxn<int> selectedAbonnementId = Rxn<int>();
+  void selectAbonnement(int? id) => selectedAbonnementId.value = id;
 
   final editingId = Rxn<int>();
 
@@ -68,12 +87,35 @@ class AbonnementsController extends GetxController {
   }
 
   List<Abonnement> visibleAbonnements() {
+    var list = abonnements.toList();
     final query = searchQuery.value.toLowerCase().trim();
-    if (query.isEmpty) return abonnements;
-    return abonnements.where((abonnement) {
-      return abonnement.reference.toLowerCase().contains(query) ||
-          abonnement.formula.toLowerCase().contains(query);
-    }).toList();
+    if (query.isNotEmpty) {
+      list = list.where((abonnement) {
+        return abonnement.reference.toLowerCase().contains(query) ||
+            abonnement.formula.toLowerCase().contains(query);
+      }).toList();
+    }
+    final clientIdFilter = filterClientId.value;
+    if (clientIdFilter != null) {
+      list = list.where((a) => a.clientId == clientIdFilter).toList();
+    }
+    final logementIdFilter = filterLogementId.value;
+    if (logementIdFilter != null) {
+      list = list.where((a) => a.logementId == logementIdFilter).toList();
+    }
+    final statusFilter = filterStatus.value;
+    if (statusFilter != null) {
+      list = list.where((a) => a.paymentStatus == statusFilter).toList();
+    }
+    list.sort((a, b) {
+      final dateA = a.renewalDate;
+      final dateB = b.renewalDate;
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB);
+    });
+    return list;
   }
 
   String clientLabelFor(int? clientId) {
@@ -120,6 +162,26 @@ class AbonnementsController extends GetxController {
     renewalDate.value = null;
     lastPaymentDate.value = null;
     nextPaymentDate.value = null;
+    paymentStatus.value = PaymentStatus.aJour;
+    observations.value = null;
+    isSaving.value = false;
+    formError.value = null;
+  }
+
+  /// Préremplit le formulaire de création pour renouveler [old] : un NOUVEL
+  /// abonnement est créé au clic sur Enregistrer (`editingId` reste `null`),
+  /// jamais une modification de l'abonnement existant.
+  void openRenewForm(Abonnement old) {
+    final now = DateTime.now();
+    editingId.value = null;
+    clientId.value = old.clientId;
+    logementId.value = old.logementId;
+    formula.value = old.formula;
+    monthlyPriceText.value = old.monthlyPrice.toString();
+    startDate.value = now;
+    renewalDate.value = old.renewalDate;
+    lastPaymentDate.value = now;
+    nextPaymentDate.value = old.renewalDate;
     paymentStatus.value = PaymentStatus.aJour;
     observations.value = null;
     isSaving.value = false;
@@ -200,6 +262,14 @@ class AbonnementsController extends GetxController {
           observations: observations.value,
           updatedBy: currentUid,
         );
+        await _recordAutomaticEffects(
+          clientId: clientIdValue,
+          formula: formulaValue.trim(),
+          monthlyPrice: monthlyPrice,
+          renewalDateValue: renewalDate.value,
+          paymentStatusValue: paymentStatusValue,
+          currentUid: currentUid,
+        );
       } else {
         await _repository.update(
           id: id,
@@ -221,6 +291,47 @@ class AbonnementsController extends GetxController {
       formError.value = 'Erreur lors de l\'enregistrement : $e';
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  /// Effets automatiques déclenchés à la création d'un abonnement (retour
+  /// utilisateur) : si le paiement est marqué « à jour », enregistre tout de
+  /// suite la transaction correspondante dans Finances ; si une date de
+  /// renouvellement est renseignée, crée l'évènement correspondant dans le
+  /// calendrier. Jamais appelé lors d'une simple modification (édition d'un
+  /// abonnement existant), uniquement à la création d'une nouvelle ligne —
+  /// y compris via `openRenewForm`, qui crée toujours une nouvelle ligne.
+  Future<void> _recordAutomaticEffects({
+    required int clientId,
+    required String formula,
+    required double monthlyPrice,
+    required DateTime? renewalDateValue,
+    required PaymentStatus paymentStatusValue,
+    required String currentUid,
+  }) async {
+    if (paymentStatusValue == PaymentStatus.aJour) {
+      final now = DateTime.now();
+      final period = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      await _financesRepository.create(
+        transactionDate: now,
+        transactionType: TransactionType.entree,
+        relatedClientId: clientId,
+        description: 'Paiement abonnement — $formula',
+        amount: monthlyPrice,
+        status: TransactionStatus.valide,
+        periodMonth: period,
+        updatedBy: currentUid,
+      );
+    }
+    if (renewalDateValue != null) {
+      await _calendrierRepository.create(
+        eventType: CalendarEventType.renouvellement,
+        title: 'Renouvellement abonnement — ${clientLabelFor(clientId)}',
+        eventDate: renewalDateValue,
+        relatedReference: formula,
+        status: CalendarEventStatus.planifie,
+        updatedBy: currentUid,
+      );
     }
   }
 

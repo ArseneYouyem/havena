@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:havena/core/database/app_database.dart';
@@ -15,8 +16,24 @@ class RapportPdfGenerator {
     required Rapport rapport,
     required Logement logement,
     String? clientName,
+    List<String> photoFilePaths = const [],
   }) async {
     final pdf = pw.Document();
+
+    // Photos jointes (cahier des charges §13) : lues avant la construction
+    // du PDF, un fichier manquant/corrompu est simplement ignoré plutôt que
+    // de faire échouer toute la génération.
+    final photoImages = <pw.MemoryImage>[];
+    for (final path in photoFilePaths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          photoImages.add(pw.MemoryImage(await file.readAsBytes()));
+        }
+      } catch (_) {
+        // Fichier illisible : ignoré, ne bloque pas la génération.
+      }
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -76,6 +93,29 @@ class RapportPdfGenerator {
           ],
           _buildTextSection('Recommandations', rapport.recommendations),
           _buildTextSection('Prochaines actions', rapport.nextActions),
+          if (photoImages.isNotEmpty) ...[
+            _buildSectionTitle('Photos'),
+            pw.Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: photoImages
+                  .map((image) => pw.Container(
+                        width: 130,
+                        height: 130,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(color: PdfColors.grey300),
+                          borderRadius:
+                              const pw.BorderRadius.all(pw.Radius.circular(4)),
+                        ),
+                        child: pw.ClipRRect(
+                          horizontalRadius: 4,
+                          verticalRadius: 4,
+                          child: pw.Image(image, fit: pw.BoxFit.cover),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );

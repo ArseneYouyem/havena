@@ -1,3 +1,4 @@
+import 'package:havena/shared/widgets/layout/page_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
@@ -10,18 +11,24 @@ class FinancesContent extends GetView<FinancesController> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildListView(context),
+        const _FinanceDrawer(),
+      ],
+    );
+  }
+
+  Widget _buildListView(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Finances',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          const PageHeader(
+            title: 'Finances',
+            subtitle: 'Gardez une vue claire sur vos entrées et dépenses.',
+            icon: Icons.account_balance_wallet_outlined,
           ),
           const SizedBox(height: 16),
           Obx(() {
@@ -42,9 +49,7 @@ class FinancesContent extends GetView<FinancesController> {
                 _buildSummaryCard(
                   'Solde',
                   controller.solde,
-                  controller.solde >= 0
-                      ? AppColors.success
-                      : AppColors.error,
+                  controller.solde >= 0 ? AppColors.success : AppColors.error,
                 ),
               ],
             );
@@ -73,11 +78,13 @@ class FinancesContent extends GetView<FinancesController> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildFiltersRow(context),
           const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               final list = controller.visibleFinances();
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
+              if (list.isEmpty && controller.finances.isEmpty) {
                 return const Center(
                   child: Text(
                     'Aucune transaction',
@@ -97,91 +104,51 @@ class FinancesContent extends GetView<FinancesController> {
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final finance = list[index];
+                  final isEntree =
+                      finance.transactionType == TransactionType.entree;
+                  final amountColor =
+                      isEntree ? AppColors.success : AppColors.error;
                   return Card(
+                    elevation: 0,
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
                     child: ListTile(
+                      onTap: () => controller.selectFinance(finance.id),
                       leading: CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: const Icon(Icons.payments,
-                            color: AppColors.primary, size: 20),
+                        backgroundColor: amountColor.withValues(alpha: 0.08),
+                        child: Icon(
+                          isEntree
+                              ? Icons.arrow_downward
+                              : Icons.arrow_upward,
+                          color: amountColor,
+                          size: 18,
+                        ),
                       ),
                       title: Text(
-                        finance.reference,
-                        style: const TextStyle(color: AppColors.textPrimary),
+                        finance.description,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            finance.description,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            _formatDate(finance.transactionDate),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            '${finance.transactionType == TransactionType.entree ? '+' : '-'}${finance.amount.toStringAsFixed(2)} FCFA',
-                            style: TextStyle(
-                              color: finance.transactionType ==
-                                      TransactionType.entree
-                                  ? AppColors.success
-                                  : AppColors.error,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (controller
-                              .clientLabelFor(finance.relatedClientId)
-                              .isNotEmpty)
-                            Text(
-                              controller
-                                  .clientLabelFor(finance.relatedClientId),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          if (controller
-                              .prestataireLabelFor(
-                                  finance.relatedPrestataireId)
-                              .isNotEmpty)
-                            Text(
-                              controller.prestataireLabelFor(
-                                  finance.relatedPrestataireId),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                        ],
+                      subtitle: Text(
+                        _formatDate(finance.transactionDate),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildStatusBadge(finance.status),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            color: AppColors.textSecondary,
-                            onPressed: () =>
-                                _showFormDialog(context, finance: finance),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () =>
-                                _confirmDelete(context, finance),
-                          ),
-                        ],
+                      trailing: Text(
+                        '${isEntree ? '+' : '-'}${finance.amount.toStringAsFixed(2)} FCFA',
+                        style: TextStyle(
+                          color: amountColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   );
@@ -192,6 +159,105 @@ class FinancesContent extends GetView<FinancesController> {
         ],
       ),
     );
+  }
+
+  Widget _buildFiltersRow(BuildContext context) {
+    return Obx(() {
+      return Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<TransactionType?>(
+              initialValue: controller.filterType.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Type'),
+              items: [
+                const DropdownMenuItem<TransactionType?>(
+                  value: null,
+                  child: Text('Tous les types'),
+                ),
+                ...TransactionType.values.map((type) {
+                  return DropdownMenuItem<TransactionType?>(
+                    value: type,
+                    child: Text(type.name),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterType.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<TransactionStatus?>(
+              initialValue: controller.filterStatus.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Statut'),
+              items: [
+                const DropdownMenuItem<TransactionStatus?>(
+                  value: null,
+                  child: Text('Tous les statuts'),
+                ),
+                ...TransactionStatus.values.map((status) {
+                  return DropdownMenuItem<TransactionStatus?>(
+                    value: status,
+                    child: Text(status.name),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterStatus.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterClientId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Client'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les clients'),
+                ),
+                ...controller.clients.map((client) {
+                  return DropdownMenuItem<int?>(
+                    value: client.id,
+                    child: Text(
+                      client.fullName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterClientId.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterPrestataireId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Prestataire'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les prestataires'),
+                ),
+                ...controller.prestataires.map((prestataire) {
+                  return DropdownMenuItem<int?>(
+                    value: prestataire.id,
+                    child: Text(
+                      prestataire.fullName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) =>
+                  controller.filterPrestataireId.value = value,
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildSummaryCard(String label, double value, Color color) {
@@ -283,7 +349,9 @@ class FinancesContent extends GetView<FinancesController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDateField(
-                    'Date de transaction *', controller.transactionDate),
+                  'Date de transaction *',
+                  controller.transactionDate,
+                ),
                 const SizedBox(height: 16),
                 Obx(() {
                   return DropdownButtonFormField<TransactionType>(
@@ -315,7 +383,8 @@ class FinancesContent extends GetView<FinancesController> {
                         return DropdownMenuItem<int?>(
                           value: client.id,
                           child: Text(
-                              '${client.fullName} (${client.reference})'),
+                            '${client.fullName} (${client.reference})',
+                          ),
                         );
                       }),
                     ],
@@ -339,7 +408,8 @@ class FinancesContent extends GetView<FinancesController> {
                         return DropdownMenuItem<int?>(
                           value: prestataire.id,
                           child: Text(
-                              '${prestataire.fullName} (${prestataire.reference})'),
+                            '${prestataire.fullName} (${prestataire.reference})',
+                          ),
                         );
                       }),
                     ],
@@ -351,27 +421,31 @@ class FinancesContent extends GetView<FinancesController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.description.value),
+                    text: controller.description.value,
+                  ),
                   onChanged: (value) => controller.description.value = value,
                   decoration: _inputDecoration('Description *'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.amountText.value),
+                    text: controller.amountText.value,
+                  ),
                   onChanged: (value) => controller.amountText.value = value,
                   decoration: _inputDecoration('Montant (FCFA) *'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.paymentMethod.value),
-                  onChanged: (value) =>
-                      controller.paymentMethod.value = value,
-                  decoration:
-                      _inputDecoration('Méthode de paiement (optionnel)'),
+                    text: controller.paymentMethod.value,
+                  ),
+                  onChanged: (value) => controller.paymentMethod.value = value,
+                  decoration: _inputDecoration(
+                    'Méthode de paiement (optionnel)',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Obx(() {
@@ -392,16 +466,19 @@ class FinancesContent extends GetView<FinancesController> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.periodMonth.value),
+                    text: controller.periodMonth.value,
+                  ),
                   onChanged: (value) => controller.periodMonth.value = value,
-                  decoration:
-                      _inputDecoration('Mois de période * (format YYYY-MM)'),
+                  decoration: _inputDecoration(
+                    'Mois de période * (format YYYY-MM)',
+                  ),
                   keyboardType: TextInputType.datetime,
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: TextEditingController(
-                      text: controller.observations.value),
+                    text: controller.observations.value,
+                  ),
                   onChanged: (value) => controller.observations.value = value,
                   decoration: _inputDecoration('Observations (optionnel)'),
                   maxLines: 3,
@@ -536,6 +613,226 @@ class FinancesContent extends GetView<FinancesController> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Drawer qui glisse depuis la droite et s'arrête à mi-largeur de l'onglet
+/// Finances (retour utilisateur : liste allégée, détails complets affichés
+/// uniquement au clic) — même principe que les drawers Clients/Logements.
+class _FinanceDrawer extends StatelessWidget {
+  const _FinanceDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<FinancesController>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final id = controller.selectedFinanceId.value;
+          Finance? finance;
+          if (id != null) {
+            for (final f in controller.finances) {
+              if (f.id == id) {
+                finance = f;
+                break;
+              }
+            }
+          }
+          final isOpen = finance != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectFinance(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: finance == null
+                      ? const SizedBox.shrink()
+                      : _FinanceDrawerContent(
+                          finance: finance,
+                          onClose: () => controller.selectFinance(null),
+                        ),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+}
+
+class _FinanceDrawerContent extends GetView<FinancesController> {
+  const _FinanceDrawerContent({required this.finance, required this.onClose});
+
+  final Finance finance;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    const view = FinancesContent();
+    final isEntree = finance.transactionType == TransactionType.entree;
+    final amountColor = isEntree ? AppColors.success : AppColors.error;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                color: AppColors.textPrimary,
+                onPressed: onClose,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  finance.reference,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              view._buildStatusBadge(finance.status),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    finance.description,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${isEntree ? '+' : '-'}${finance.amount.toStringAsFixed(2)} FCFA',
+                    style: TextStyle(
+                      color: amountColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    Icons.event_outlined,
+                    view._formatDate(finance.transactionDate),
+                  ),
+                  _buildInfoRow(
+                    Icons.calendar_month_outlined,
+                    'Période : ${finance.periodMonth}',
+                  ),
+                  if (controller
+                      .clientLabelFor(finance.relatedClientId)
+                      .isNotEmpty)
+                    _buildInfoRow(
+                      Icons.person_outline,
+                      controller.clientLabelFor(finance.relatedClientId),
+                    ),
+                  if (controller
+                      .prestataireLabelFor(finance.relatedPrestataireId)
+                      .isNotEmpty)
+                    _buildInfoRow(
+                      Icons.engineering_outlined,
+                      controller
+                          .prestataireLabelFor(finance.relatedPrestataireId),
+                    ),
+                  if (finance.paymentMethod != null &&
+                      finance.paymentMethod!.isNotEmpty)
+                    _buildInfoRow(
+                      Icons.payment_outlined,
+                      finance.paymentMethod!,
+                    ),
+                  if (finance.observations != null &&
+                      finance.observations!.isNotEmpty)
+                    _buildInfoRow(
+                      Icons.notes_outlined,
+                      finance.observations!,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    onClose();
+                    view._showFormDialog(context, finance: finance);
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Modifier'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => view._confirmDelete(context, finance),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                  ),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Supprimer'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
           ),
         ],
       ),
