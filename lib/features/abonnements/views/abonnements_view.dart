@@ -11,6 +11,15 @@ class AbonnementsContent extends GetView<AbonnementsController> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildListView(context),
+        const _AbonnementDrawer(),
+      ],
+    );
+  }
+
+  Widget _buildListView(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -45,11 +54,13 @@ class AbonnementsContent extends GetView<AbonnementsController> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          _buildFiltersRow(context),
           const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               final list = controller.visibleAbonnements();
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
+              if (list.isEmpty && controller.abonnements.isEmpty) {
                 return const Center(
                   child: Text(
                     'Aucun abonnement',
@@ -73,6 +84,7 @@ class AbonnementsContent extends GetView<AbonnementsController> {
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
+                      onTap: () => controller.selectAbonnement(abonnement.id),
                       leading: CircleAvatar(
                         backgroundColor: AppColors.primary.withValues(
                           alpha: 0.1,
@@ -166,6 +178,83 @@ class AbonnementsContent extends GetView<AbonnementsController> {
     );
   }
 
+  Widget _buildFiltersRow(BuildContext context) {
+    return Obx(() {
+      return Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterClientId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Client'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les clients'),
+                ),
+                ...controller.clients.map((client) {
+                  return DropdownMenuItem<int?>(
+                    value: client.id,
+                    child: Text(
+                      client.fullName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterClientId.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<int?>(
+              initialValue: controller.filterLogementId.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Logement'),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Tous les logements'),
+                ),
+                ...controller.logements.map((logement) {
+                  return DropdownMenuItem<int?>(
+                    value: logement.id,
+                    child: Text(
+                      logement.address,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterLogementId.value = value,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<PaymentStatus?>(
+              initialValue: controller.filterStatus.value,
+              isExpanded: true,
+              decoration: _inputDecoration('Statut'),
+              items: [
+                const DropdownMenuItem<PaymentStatus?>(
+                  value: null,
+                  child: Text('Tous les statuts'),
+                ),
+                ...PaymentStatus.values.map((status) {
+                  return DropdownMenuItem<PaymentStatus?>(
+                    value: status,
+                    child: Text(status.name),
+                  );
+                }),
+              ],
+              onChanged: (value) => controller.filterStatus.value = value,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   Widget _buildPaymentStatusBadge(PaymentStatus status) {
     Color color;
     switch (status) {
@@ -196,11 +285,22 @@ class AbonnementsContent extends GetView<AbonnementsController> {
     );
   }
 
-  void _showFormDialog(BuildContext context, {Abonnement? abonnement}) {
-    if (abonnement != null) {
-      controller.openEditForm(abonnement);
-    } else {
-      controller.openCreateForm();
+  /// [initController] à `false` permet de rouvrir ce même formulaire sans
+  /// réinitialiser l'état du controller — utilisé par le bouton
+  /// « Renouveler » du drawer, qui a déjà préparé les champs via
+  /// `controller.openRenewForm(...)` juste avant.
+  void _showFormDialog(
+    BuildContext context, {
+    Abonnement? abonnement,
+    bool initController = true,
+    String? titleOverride,
+  }) {
+    if (initController) {
+      if (abonnement != null) {
+        controller.openEditForm(abonnement);
+      } else {
+        controller.openCreateForm();
+      }
     }
 
     Get.dialog(
@@ -211,9 +311,10 @@ class AbonnementsContent extends GetView<AbonnementsController> {
           side: const BorderSide(color: AppColors.border),
         ),
         title: Text(
-          abonnement == null
-              ? 'Ajouter un abonnement'
-              : 'Modifier l\'abonnement',
+          titleOverride ??
+              (abonnement == null
+                  ? 'Ajouter un abonnement'
+                  : 'Modifier l\'abonnement'),
           style: const TextStyle(color: AppColors.textPrimary),
         ),
         content: SizedBox(
@@ -446,6 +547,220 @@ class AbonnementsContent extends GetView<AbonnementsController> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Drawer qui glisse depuis la droite et s'arrête à mi-largeur de l'onglet
+/// Abonnements, pour afficher les détails complets de l'abonnement cliqué
+/// (client, logement...) avec un bouton « Renouveler » qui préremplit le
+/// formulaire de création d'un NOUVEL abonnement.
+class _AbonnementDrawer extends StatelessWidget {
+  const _AbonnementDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<AbonnementsController>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final id = controller.selectedAbonnementId.value;
+          Abonnement? abonnement;
+          if (id != null) {
+            for (final a in controller.abonnements) {
+              if (a.id == id) {
+                abonnement = a;
+                break;
+              }
+            }
+          }
+          final isOpen = abonnement != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectAbonnement(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: abonnement == null
+                      ? const SizedBox.shrink()
+                      : _AbonnementDrawerContent(
+                          abonnement: abonnement,
+                          onClose: () => controller.selectAbonnement(null),
+                        ),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+}
+
+class _AbonnementDrawerContent extends GetView<AbonnementsController> {
+  const _AbonnementDrawerContent({
+    required this.abonnement,
+    required this.onClose,
+  });
+
+  final Abonnement abonnement;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    const view = AbonnementsContent();
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                color: AppColors.textPrimary,
+                onPressed: onClose,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  abonnement.reference,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              view._buildPaymentStatusBadge(abonnement.paymentStatus),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    abonnement.formula,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${abonnement.monthlyPrice.toStringAsFixed(0)} FCFA / mois',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    Icons.person_outline,
+                    controller.clientLabelFor(abonnement.clientId),
+                  ),
+                  _buildInfoRow(
+                    Icons.home_work_outlined,
+                    controller.logementLabelFor(abonnement.logementId),
+                  ),
+                  _buildInfoRow(
+                    Icons.event_outlined,
+                    'Début : ${view._formatDate(abonnement.startDate)}',
+                  ),
+                  if (abonnement.renewalDate != null)
+                    _buildInfoRow(
+                      Icons.event_repeat_outlined,
+                      'Renouvellement : ${view._formatDate(abonnement.renewalDate!)}',
+                    ),
+                  if (abonnement.lastPaymentDate != null)
+                    _buildInfoRow(
+                      Icons.payments_outlined,
+                      'Dernier paiement : ${view._formatDate(abonnement.lastPaymentDate!)}',
+                    ),
+                  if (abonnement.nextPaymentDate != null)
+                    _buildInfoRow(
+                      Icons.schedule_outlined,
+                      'Prochain paiement : ${view._formatDate(abonnement.nextPaymentDate!)}',
+                    ),
+                  if (abonnement.observations != null &&
+                      abonnement.observations!.isNotEmpty)
+                    _buildInfoRow(
+                      Icons.notes_outlined,
+                      abonnement.observations!,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                controller.openRenewForm(abonnement);
+                onClose();
+                view._showFormDialog(
+                  context,
+                  initController: false,
+                  titleOverride: 'Renouveler l\'abonnement',
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.autorenew),
+              label: const Text('Renouveler'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
           ),
         ],
       ),

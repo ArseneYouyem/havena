@@ -120,6 +120,9 @@ class ClientsContent extends GetView<ClientsController> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Obx(() => _buildAbonnementIcon(
+                              controller.abonnementStatusFor(client.id))),
+                          const SizedBox(width: 8),
                           _buildStatusBadge(client.status),
                           const SizedBox(width: 8),
                           IconButton(
@@ -144,6 +147,38 @@ class ClientsContent extends GetView<ClientsController> {
         ],
       ),
     );
+  }
+
+  Widget _buildAbonnementIcon(ClientAbonnementStatus status) {
+    switch (status) {
+      case ClientAbonnementStatus.none:
+        return const Tooltip(
+          message: 'Aucun abonnement',
+          child: Icon(
+            Icons.card_membership_outlined,
+            color: AppColors.textSecondary,
+            size: 18,
+          ),
+        );
+      case ClientAbonnementStatus.active:
+        return const Tooltip(
+          message: 'Abonnement actif',
+          child: Icon(
+            Icons.verified_outlined,
+            color: AppColors.success,
+            size: 18,
+          ),
+        );
+      case ClientAbonnementStatus.renewingSoon:
+        return const Tooltip(
+          message: 'Renouvellement proche',
+          child: Icon(
+            Icons.hourglass_bottom_outlined,
+            color: AppColors.alertOrange,
+            size: 18,
+          ),
+        );
+    }
   }
 
   Widget _buildStatusBadge(ClientStatus status) {
@@ -659,9 +694,70 @@ class _ClientDrawerContent extends GetView<ClientsController> {
               }).toList(),
             );
           }),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Icon(Icons.card_membership_outlined,
+                  size: 18, color: AppColors.secondaryText),
+              const SizedBox(width: 8),
+              const Text(
+                'Historique des abonnements',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Obx(() {
+            final abonnements = controller.abonnementsForClient(client.id);
+            if (abonnements.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Aucun abonnement enregistré',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
+            }
+            return Column(
+              children: abonnements.map((abonnement) {
+                return Card(
+                  color: AppColors.surface,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  child: ListTile(
+                    leading:
+                        const Icon(Icons.receipt_long, color: AppColors.primary),
+                    title: Text(
+                      abonnement.formula,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
+                    subtitle: Text(
+                      'Souscrit le ${_formatDate(abonnement.startDate)}'
+                      '${abonnement.renewalDate != null ? ' — expire le ${_formatDate(abonnement.renewalDate!)}' : ''}',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          }),
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime d) {
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
   }
 
   Widget _buildInfoRow(IconData icon, String value) {

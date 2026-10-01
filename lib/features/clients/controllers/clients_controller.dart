@@ -2,23 +2,29 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/abonnements/repositories/abonnements_repository.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
 import 'package:havena/features/logements/repositories/logements_repository.dart';
+
+enum ClientAbonnementStatus { none, active, renewingSoon }
 
 class ClientsController extends GetxController {
   ClientsController(
     this._repository,
     this._sessionController,
     this._logementsRepository,
+    this._abonnementsRepository,
   );
 
   final ClientsRepository _repository;
   final SessionController _sessionController;
   final LogementsRepository _logementsRepository;
+  final AbonnementsRepository _abonnementsRepository;
 
   final clients = <Client>[].obs;
   final _logements = <Logement>[].obs;
+  final _abonnements = <Abonnement>[].obs;
   final searchQuery = ''.obs;
 
   /// Drawer latéral (retour utilisateur) : détails du client + logements
@@ -27,6 +33,7 @@ class ClientsController extends GetxController {
   final Rxn<int> selectedClientId = Rxn<int>();
 
   StreamSubscription<List<Logement>>? _logementsSub;
+  StreamSubscription<List<Abonnement>>? _abonnementsSub;
 
   final editingId = Rxn<int>();
 
@@ -59,12 +66,16 @@ class ClientsController extends GetxController {
     _logementsSub = _logementsRepository.watchAll().listen((data) {
       _logements.value = data;
     });
+    _abonnementsSub = _abonnementsRepository.watchAll().listen((data) {
+      _abonnements.value = data;
+    });
   }
 
   @override
   void onClose() {
     _clientsSub?.cancel();
     _logementsSub?.cancel();
+    _abonnementsSub?.cancel();
     super.onClose();
   }
 
@@ -72,6 +83,34 @@ class ClientsController extends GetxController {
 
   List<Logement> logementsForClient(int clientId) {
     return _logements.where((l) => l.clientId == clientId).toList();
+  }
+
+  /// Historique des abonnements du client, le plus récent en premier
+  /// (retour utilisateur : affiché dans le drawer après les logements).
+  List<Abonnement> abonnementsForClient(int clientId) {
+    final list =
+        _abonnements.where((a) => a.clientId == clientId).toList();
+    list.sort((a, b) => b.startDate.compareTo(a.startDate));
+    return list;
+  }
+
+  /// Statut d'abonnement affiché en icône sur la carte client (retour
+  /// utilisateur) : basé sur l'abonnement le plus récent (par date de
+  /// début) — même seuil de 7 jours que
+  /// `AbonnementsController.isRenewalOrPaymentSoon`.
+  ClientAbonnementStatus abonnementStatusFor(int clientId) {
+    final list = abonnementsForClient(clientId);
+    if (list.isEmpty) return ClientAbonnementStatus.none;
+    final current = list.first;
+    final now = DateTime.now();
+    final soon = now.add(const Duration(days: 7));
+    final renewalSoon =
+        (current.renewalDate != null && current.renewalDate!.isBefore(soon)) ||
+            (current.nextPaymentDate != null &&
+                current.nextPaymentDate!.isBefore(soon));
+    return renewalSoon
+        ? ClientAbonnementStatus.renewingSoon
+        : ClientAbonnementStatus.active;
   }
 
   List<Client> visibleClients() {
