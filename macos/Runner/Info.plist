@@ -28,5 +28,13 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Désactive le mode expérimental "merged UI/platform thread" (défaut
+	     Flutter depuis 3.38) : exécuter la boucle modale native de
+	     Printing.layoutPdf (aperçu/impression PDF, cf. AGENT.md « Export
+	     PDF ») sur ce thread fusionné bloque le rendu Flutter et fait
+	     disparaître la fenêtre principale (aucune exception levée, aucun
+	     rapport de crash macOS — juste 0 fenêtre restante). -->
+	<key>FLTEnableMergedPlatformUIThread</key>
+	<false/>
 </dict>
 </plist>
