@@ -1,13 +1,15 @@
-// Nécessite que LogementsBinding, ClientsBinding, InterventionsBinding et
-// InspectionsBinding soient aussi enregistrés sur la page (pour
-// LogementsRepository/ClientsRepository/InterventionsRepository/
-// InspectionsRepository/InspectionItemsRepository, utilisés par
-// RapportsController pour le pré-remplissage automatique des rapports).
+// Nécessite que LogementsBinding, ClientsBinding, InterventionsBinding,
+// InspectionsBinding et FinancesBinding soient aussi enregistrés sur la page
+// (pour LogementsRepository/ClientsRepository/InterventionsRepository/
+// InspectionsRepository/InspectionItemsRepository/FinancesRepository,
+// utilisés par RapportsController pour la génération 100% automatique des
+// rapports — résolution paresseuse, voir ClientsBinding).
 import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/finances/repositories/finances_repository.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
@@ -33,6 +35,7 @@ class RapportsBinding extends Bindings {
           Get.find<InspectionsRepository>(),
           Get.find<InspectionItemsRepository>(),
           Get.find<PhotosRepository>(),
+          Get.find<FinancesRepository>(),
         ));
   }
 }

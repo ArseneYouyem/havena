@@ -6,6 +6,7 @@ import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/pdf/rapport_pdf_generator.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/finances/repositories/finances_repository.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
@@ -25,6 +26,7 @@ class RapportsController extends GetxController {
     this._inspectionsRepository,
     this._inspectionItemsRepository,
     this._photosRepository,
+    this._financesRepository,
   );
 
   final RapportsRepository _repository;
@@ -35,23 +37,19 @@ class RapportsController extends GetxController {
   final InspectionsRepository _inspectionsRepository;
   final InspectionItemsRepository _inspectionItemsRepository;
   final PhotosRepository _photosRepository;
+  final FinancesRepository _financesRepository;
 
   final rapports = <Rapport>[].obs;
   final logements = <Logement>[].obs;
   final clients = <Client>[].obs;
   final searchQuery = ''.obs;
 
-  final editingId = Rxn<int>();
-
-  final logementId = Rxn<int>();
-  final periodMonth = ''.obs;
-  final generalCondition = Rxn<HousingCondition>();
-  final inspectionDone = false.obs;
-  final anomalies = Rxn<String>();
-  final interventionsDone = Rxn<String>();
-  final totalExpensesText = ''.obs;
-  final recommendations = Rxn<String>();
-  final nextActions = Rxn<String>();
+  /// Mois affiché (format YYYY-MM) — retour utilisateur : la génération est
+  /// désormais 100% automatique pour tous les logements d'un coup, l'user
+  /// choisit juste le mois. Présélectionné sur le mois précédent (un
+  /// rapport ne peut être généré que pour un mois déjà terminé, voir
+  /// `canGenerateForSelectedMonth`).
+  final selectedMonth = ''.obs;
 
   final isSaving = false.obs;
   final formError = Rxn<String>();
@@ -73,9 +71,7 @@ class RapportsController extends GetxController {
     _clientsSub = _clientsRepository.watchAll().listen((data) {
       clients.value = data;
     });
-    final now = DateTime.now();
-    final month = now.month.toString().padLeft(2, '0');
-    periodMonth.value = '${now.year}-$month';
+    selectedMonth.value = _monthKey(_previousMonth(DateTime.now()));
   }
 
   @override
@@ -85,6 +81,29 @@ class RapportsController extends GetxController {
     _clientsSub?.cancel();
     super.onClose();
   }
+
+  String _monthKey(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}';
+
+  DateTime _previousMonth(DateTime date) => DateTime(date.year, date.month - 1);
+
+  void goToPreviousMonth() {
+    final parts = selectedMonth.value.split('-');
+    final current = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    selectedMonth.value = _monthKey(DateTime(current.year, current.month - 1));
+  }
+
+  void goToNextMonth() {
+    final parts = selectedMonth.value.split('-');
+    final current = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    selectedMonth.value = _monthKey(DateTime(current.year, current.month + 1));
+  }
+
+  /// Un rapport ne peut être généré que pour un mois déjà terminé (retour
+  /// utilisateur) : le bouton reste masqué pour le mois courant (et tout
+  /// mois futur, atteignable via la flèche suivante).
+  bool get canGenerateForSelectedMonth =>
+      selectedMonth.value.compareTo(_monthKey(DateTime.now())) < 0;
 
   T? _firstWhereOrNull<T>(Iterable<T> items, bool Function(T) test) {
     for (final item in items) {
@@ -99,176 +118,137 @@ class RapportsController extends GetxController {
     return logement?.address ?? 'Logement introuvable';
   }
 
+  /// Rapports du mois sélectionné (retour utilisateur : la page affiche les
+  /// rapports mois par mois), recherche texte appliquée en plus.
   List<Rapport> visibleRapports() {
+    final period = selectedMonth.value;
+    var list = rapports.where((r) => r.periodMonth == period).toList();
     final query = searchQuery.value.toLowerCase().trim();
-    if (query.isEmpty) return rapports;
-    return rapports.where((rapport) {
-      return rapport.reference.toLowerCase().contains(query) ||
-          rapport.periodMonth.toLowerCase().contains(query);
-    }).toList();
+    if (query.isNotEmpty) {
+      list = list
+          .where((rapport) =>
+              rapport.reference.toLowerCase().contains(query))
+          .toList();
+    }
+    return list;
   }
 
-  void openCreateForm() {
-    editingId.value = null;
-    logementId.value = null;
-    final now = DateTime.now();
-    final month = now.month.toString().padLeft(2, '0');
-    periodMonth.value = '${now.year}-$month';
-    generalCondition.value = null;
-    inspectionDone.value = false;
-    anomalies.value = null;
-    interventionsDone.value = null;
-    totalExpensesText.value = '';
-    recommendations.value = null;
-    nextActions.value = null;
-    isSaving.value = false;
-    formError.value = null;
-  }
-
-  void openEditForm(Rapport rapport) {
-    editingId.value = rapport.id;
-    logementId.value = rapport.logementId;
-    periodMonth.value = rapport.periodMonth;
-    generalCondition.value = rapport.generalCondition;
-    inspectionDone.value = rapport.inspectionDone;
-    anomalies.value = rapport.anomalies;
-    interventionsDone.value = rapport.interventionsDone;
-    totalExpensesText.value = rapport.totalExpenses?.toString() ?? '';
-    recommendations.value = rapport.recommendations;
-    nextActions.value = rapport.nextActions;
-    isSaving.value = false;
-    formError.value = null;
-  }
-
-  /// Pré-remplit le formulaire à partir des enregistrements existants pour
-  /// ce logement sur cette période (interventions, inspections) — répond à
-  /// la remarque de l'utilisateur : un rapport ne devrait pas redemander
-  /// des informations déjà saisies ailleurs. Reste modifiable ensuite
-  /// (décision utilisateur), appelée à chaque changement de logement ou de
-  /// mois dans le formulaire.
-  Future<void> autoFillFromRecords() async {
-    final logId = logementId.value;
-    final period = periodMonth.value.trim();
-    if (logId == null || !RegExp(r'^\d{4}-\d{2}$').hasMatch(period)) return;
-
-    final parts = period.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    bool inPeriod(DateTime? date) =>
-        date != null && date.year == year && date.month == month;
-
-    final allInterventions = await _interventionsRepository.watchAll().first;
-    final monthInterventions = allInterventions
-        .where((i) => i.logementId == logId && inPeriod(i.interventionDate))
-        .toList();
-
-    interventionsDone.value = monthInterventions.isEmpty
-        ? null
-        : monthInterventions
-            .map((i) => '${i.reference} — ${i.problemDescription}')
-            .join('\n');
-
-    final totalExpensesValue = monthInterventions
-        .map((i) => i.prestataireAmount ?? 0)
-        .fold<double>(0, (a, b) => a + b);
-    totalExpensesText.value =
-        totalExpensesValue > 0 ? totalExpensesValue.toStringAsFixed(0) : '';
-
-    final allInspections = await _inspectionsRepository.watchAll().first;
-    final monthInspections = allInspections
-        .where((i) => i.logementId == logId && inPeriod(i.inspectionDate))
-        .toList()
-      ..sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
-
-    inspectionDone.value = monthInspections.any((i) => i.isValidated);
-
-    if (monthInspections.isEmpty) {
-      generalCondition.value = null;
-      recommendations.value = null;
-      anomalies.value = null;
-      return;
-    }
-
-    final latest = monthInspections.first;
-    generalCondition.value = latest.generalCondition;
-    recommendations.value = latest.recommendations;
-
-    final problems = <String>[];
-    for (final inspection in monthInspections) {
-      final items = await _inspectionItemsRepository
-          .watchByInspection(inspection.id)
-          .first;
-      for (final item in items.where((it) => it.isOk == false)) {
-        final observation = item.observation;
-        problems.add(observation != null && observation.isNotEmpty
-            ? '${item.label} : $observation'
-            : item.label);
-      }
-    }
-    anomalies.value = problems.isEmpty ? null : problems.join('\n');
-  }
-
-  Future<void> submitForm() async {
-    final logementIdValue = logementId.value;
-    final periodMonthValue = periodMonth.value.trim();
-
-    if (logementIdValue == null) {
-      formError.value = 'Le logement est obligatoire.';
-      return;
-    }
-    if (!RegExp(r'^\d{4}-\d{2}$').hasMatch(periodMonthValue)) {
-      formError.value = 'Le mois de période doit être au format YYYY-MM.';
-      return;
-    }
-
-    double? totalExpenses;
-    final totalExpensesInput = totalExpensesText.value.trim();
-    if (totalExpensesInput.isNotEmpty) {
-      totalExpenses =
-          double.tryParse(totalExpensesInput.replaceAll(',', '.'));
-      if (totalExpenses == null) {
-        formError.value =
-            'Le total des dépenses doit être un nombre décimal.';
-        return;
-      }
-    }
+  /// Génère automatiquement, pour CHAQUE logement, le rapport du mois
+  /// sélectionné (retour utilisateur : plus de saisie manuelle, le système
+  /// a déjà toutes les informations nécessaires — inspections,
+  /// interventions, dépenses du client). Un logement déjà rapporté ce mois
+  /// voit son rapport recalculé (mêmes informations qu'une nouvelle
+  /// génération), sans dupliquer la ligne ni perdre son éventuel PDF déjà
+  /// généré (conservé par `RapportsRepository.update`).
+  Future<void> generateReportsForSelectedMonth() async {
+    if (!canGenerateForSelectedMonth || isSaving.value) return;
 
     isSaving.value = true;
     formError.value = null;
     try {
+      final period = selectedMonth.value;
+      final parts = period.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      bool inPeriod(DateTime? date) =>
+          date != null && date.year == year && date.month == month;
+
       final currentUid = _sessionController.session.value?.uid ?? 'system';
-      final id = editingId.value;
-      if (id == null) {
-        await _repository.create(
-          logementId: logementIdValue,
-          periodMonth: periodMonthValue,
-          generalCondition: generalCondition.value,
-          inspectionDone: inspectionDone.value,
-          anomalies: anomalies.value,
-          interventionsDone: interventionsDone.value,
-          totalExpenses: totalExpenses,
-          recommendations: recommendations.value,
-          nextActions: nextActions.value,
-          updatedBy: currentUid,
-        );
-      } else {
-        await _repository.update(
-          id: id,
-          logementId: logementIdValue,
-          periodMonth: periodMonthValue,
-          generalCondition: generalCondition.value,
-          inspectionDone: inspectionDone.value,
-          anomalies: anomalies.value,
-          interventionsDone: interventionsDone.value,
-          totalExpenses: totalExpenses,
-          recommendations: recommendations.value,
-          nextActions: nextActions.value,
-          updatedBy: currentUid,
-        );
+      final allInterventions =
+          await _interventionsRepository.watchAll().first;
+      final allInspections = await _inspectionsRepository.watchAll().first;
+      final allFinances = await _financesRepository.watchAll().first;
+
+      for (final logement in logements.toList()) {
+        final monthInterventions = allInterventions
+            .where((i) =>
+                i.logementId == logement.id && inPeriod(i.interventionDate))
+            .toList();
+        final interventionsDoneValue = monthInterventions.isEmpty
+            ? null
+            : monthInterventions
+                .map((i) => '${i.reference} — ${i.problemDescription}')
+                .join('\n');
+
+        final monthInspections = allInspections
+            .where((i) =>
+                i.logementId == logement.id && inPeriod(i.inspectionDate))
+            .toList()
+          ..sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
+        final inspectionDoneValue = monthInspections.any((i) => i.isValidated);
+
+        HousingCondition? generalConditionValue;
+        String? recommendationsValue;
+        String? anomaliesValue;
+        if (monthInspections.isNotEmpty) {
+          final latest = monthInspections.first;
+          generalConditionValue = latest.generalCondition;
+          recommendationsValue = latest.recommendations;
+
+          final problems = <String>[];
+          for (final inspection in monthInspections) {
+            final items = await _inspectionItemsRepository
+                .watchByInspection(inspection.id)
+                .first;
+            for (final item in items.where((it) => it.isOk == false)) {
+              final observation = item.observation;
+              problems.add(observation != null && observation.isNotEmpty
+                  ? '${item.label} : $observation'
+                  : item.label);
+            }
+          }
+          anomaliesValue = problems.isEmpty ? null : problems.join('\n');
+        }
+
+        // Dépense totale faite par le CLIENT ce mois (paiements ponctuels
+        // et/ou abonnements, déjà enregistrés comme entrées dans Finances —
+        // voir AbonnementsController pour l'automatisation de ces
+        // dernières) : un rapport destiné au client résume ce qu'il a payé,
+        // pas ce que HAVENA a reversé aux prestataires.
+        double? totalExpensesValue;
+        final clientId = logement.clientId;
+        if (clientId != null) {
+          final total = allFinances
+              .where((f) =>
+                  f.transactionType == TransactionType.entree &&
+                  f.relatedClientId == clientId &&
+                  f.periodMonth == period)
+              .fold<double>(0, (sum, f) => sum + f.amount);
+          totalExpensesValue = total > 0 ? total : null;
+        }
+
+        final existing = _firstWhereOrNull(
+            rapports, (r) => r.logementId == logement.id && r.periodMonth == period);
+        if (existing == null) {
+          await _repository.create(
+            logementId: logement.id,
+            periodMonth: period,
+            generalCondition: generalConditionValue,
+            inspectionDone: inspectionDoneValue,
+            anomalies: anomaliesValue,
+            interventionsDone: interventionsDoneValue,
+            totalExpenses: totalExpensesValue,
+            recommendations: recommendationsValue,
+            updatedBy: currentUid,
+          );
+        } else {
+          await _repository.update(
+            id: existing.id,
+            logementId: logement.id,
+            periodMonth: period,
+            generalCondition: generalConditionValue,
+            inspectionDone: inspectionDoneValue,
+            anomalies: anomaliesValue,
+            interventionsDone: interventionsDoneValue,
+            totalExpenses: totalExpensesValue,
+            recommendations: recommendationsValue,
+            nextActions: existing.nextActions,
+            updatedBy: currentUid,
+          );
+        }
       }
-      Get.back();
     } catch (e) {
-      formError.value = 'Erreur lors de l\'enregistrement : $e';
+      formError.value = 'Erreur lors de la génération des rapports : $e';
     } finally {
       isSaving.value = false;
     }

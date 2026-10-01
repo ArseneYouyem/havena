@@ -9,6 +9,21 @@ import 'package:havena/features/rapports/controllers/rapports_controller.dart';
 class RapportsContent extends GetView<RapportsController> {
   const RapportsContent({super.key});
 
+  static const _monthLabels = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -18,50 +33,31 @@ class RapportsContent extends GetView<RapportsController> {
         children: [
           const PageHeader(
             title: 'Rapports mensuels',
-            subtitle: 'Les bilans mensuels de votre activité.',
+            subtitle:
+                'Générés automatiquement pour chaque logement — sélectionnez simplement le mois.',
             icon: Icons.bar_chart_outlined,
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  onChanged: (value) => controller.searchQuery.value = value,
-                  decoration: _inputDecoration(
-                    'Rechercher un rapport',
-                    prefixIcon: const Icon(Icons.search),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _showFormDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text('Nouveau rapport'),
-              ),
-            ],
+          _buildMonthSelector(context),
+          const SizedBox(height: 16),
+          TextField(
+            onChanged: (value) => controller.searchQuery.value = value,
+            decoration: _inputDecoration(
+              'Rechercher un rapport',
+              prefixIcon: const Icon(Icons.search),
+            ),
           ),
           const SizedBox(height: 16),
           Expanded(
             child: Obx(() {
               final list = controller.visibleRapports();
-              if (list.isEmpty && controller.searchQuery.value.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Aucun rapport',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                );
-              }
               if (list.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'Aucun résultat',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    controller.searchQuery.value.isEmpty
+                        ? 'Aucun rapport pour ce mois'
+                        : 'Aucun résultat',
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 );
               }
@@ -84,21 +80,14 @@ class RapportsContent extends GetView<RapportsController> {
                         ),
                       ),
                       title: Text(
-                        rapport.reference,
+                        controller.logementLabelFor(rapport.logementId),
                         style: const TextStyle(color: AppColors.textPrimary),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            controller.logementLabelFor(rapport.logementId),
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            rapport.periodMonth,
+                            rapport.reference,
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
@@ -124,6 +113,15 @@ class RapportsContent extends GetView<RapportsController> {
                                   ),
                                 ),
                               ],
+                            ),
+                          if (rapport.totalExpenses != null)
+                            Text(
+                              'Dépenses du client : ${rapport.totalExpenses!.toStringAsFixed(0)} FCFA',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           if (rapport.generatedAt != null)
                             Text(
@@ -157,15 +155,9 @@ class RapportsContent extends GetView<RapportsController> {
                                   : () => controller.generateAndPreviewPdf(
                                       rapport.id,
                                     ),
-                              tooltip: 'Générer / Aperçu PDF',
+                              tooltip: 'Aperçu / impression PDF',
                             );
                           }),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            color: AppColors.textSecondary,
-                            onPressed: () =>
-                                _showFormDialog(context, rapport: rapport),
-                          ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             color: AppColors.error,
@@ -182,6 +174,63 @@ class RapportsContent extends GetView<RapportsController> {
         ],
       ),
     );
+  }
+
+  Widget _buildMonthSelector(BuildContext context) {
+    return Obx(() {
+      final parts = controller.selectedMonth.value.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final canGenerate = controller.canGenerateForSelectedMonth;
+      return Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            color: AppColors.textPrimary,
+            onPressed: controller.goToPreviousMonth,
+          ),
+          Text(
+            '${_monthLabels[month - 1]} $year',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            color: AppColors.textPrimary,
+            onPressed: controller.goToNextMonth,
+          ),
+          const Spacer(),
+          // Un mois ne peut être rapporté qu'une fois terminé (retour
+          // utilisateur) : le bouton reste masqué pour le mois courant.
+          if (canGenerate)
+            Obx(() {
+              final saving = controller.isSaving.value;
+              return ElevatedButton.icon(
+                onPressed:
+                    saving ? null : controller.generateReportsForSelectedMonth,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.auto_awesome),
+                label: const Text('Générer les rapports du mois'),
+              );
+            }),
+        ],
+      );
+    });
   }
 
   Widget _buildConditionBadge(HousingCondition condition) {
@@ -226,220 +275,6 @@ class RapportsContent extends GetView<RapportsController> {
       ),
       focusedBorder: const OutlineInputBorder(
         borderSide: BorderSide(color: AppColors.primary),
-      ),
-    );
-  }
-
-  void _showFormDialog(BuildContext context, {Rapport? rapport}) {
-    if (rapport != null) {
-      controller.openEditForm(rapport);
-    } else {
-      controller.openCreateForm();
-    }
-
-    // Contrôleurs stables (créés une seule fois à l'ouverture du dialog) :
-    // recréer un TextEditingController à chaque build, comme le faisaient
-    // ces champs auparavant, empêche le pré-remplissage automatique
-    // (`autoFillFromRecords`) de s'afficher, et casse la position du
-    // curseur pendant la saisie (même bug déjà corrigé sur « Gestion des
-    // accès »).
-    final periodMonthController =
-        TextEditingController(text: controller.periodMonth.value);
-    final anomaliesController =
-        TextEditingController(text: controller.anomalies.value);
-    final interventionsDoneController =
-        TextEditingController(text: controller.interventionsDone.value);
-    final totalExpensesController =
-        TextEditingController(text: controller.totalExpensesText.value);
-    final recommendationsController =
-        TextEditingController(text: controller.recommendations.value);
-    final nextActionsController =
-        TextEditingController(text: controller.nextActions.value);
-
-    Future<void> autoFillAndRefresh() async {
-      await controller.autoFillFromRecords();
-      anomaliesController.text = controller.anomalies.value ?? '';
-      interventionsDoneController.text = controller.interventionsDone.value ?? '';
-      totalExpensesController.text = controller.totalExpensesText.value;
-      recommendationsController.text = controller.recommendations.value ?? '';
-    }
-
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: Text(
-          rapport == null ? 'Nouveau rapport' : 'Modifier le rapport',
-          style: const TextStyle(color: AppColors.textPrimary),
-        ),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Obx(() {
-                  final logementsList = controller.logements;
-                  return DropdownButtonFormField<int?>(
-                    initialValue: controller.logementId.value,
-                    decoration: _inputDecoration('Logement *'),
-                    items: [
-                      const DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text('Sélectionner un logement'),
-                      ),
-                      ...logementsList.map((logement) {
-                        return DropdownMenuItem<int?>(
-                          value: logement.id,
-                          child: Text(
-                            '${logement.reference} — ${logement.address}',
-                          ),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      controller.logementId.value = value;
-                      autoFillAndRefresh();
-                    },
-                  );
-                }),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: periodMonthController,
-                  onChanged: (value) {
-                    controller.periodMonth.value = value;
-                    autoFillAndRefresh();
-                  },
-                  decoration: _inputDecoration(
-                    'Mois de période * (format YYYY-MM)',
-                  ),
-                  keyboardType: TextInputType.datetime,
-                ),
-                const SizedBox(height: 16),
-                Obx(() {
-                  return DropdownButtonFormField<HousingCondition?>(
-                    initialValue: controller.generalCondition.value,
-                    decoration: _inputDecoration('État général (optionnel)'),
-                    items: [
-                      const DropdownMenuItem<HousingCondition?>(
-                        value: null,
-                        child: Text('Aucun'),
-                      ),
-                      ...HousingCondition.values.map((condition) {
-                        return DropdownMenuItem<HousingCondition?>(
-                          value: condition,
-                          child: Text(condition.name),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      controller.generalCondition.value = value;
-                    },
-                  );
-                }),
-                const SizedBox(height: 16),
-                Obx(() {
-                  return SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Inspection réalisée'),
-                    value: controller.inspectionDone.value,
-                    onChanged: (value) {
-                      controller.inspectionDone.value = value;
-                    },
-                  );
-                }),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: anomaliesController,
-                  onChanged: (value) => controller.anomalies.value = value,
-                  decoration: _inputDecoration('Anomalies (optionnel)'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: interventionsDoneController,
-                  onChanged: (value) =>
-                      controller.interventionsDone.value = value,
-                  decoration: _inputDecoration(
-                    'Interventions réalisées (optionnel)',
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: totalExpensesController,
-                  onChanged: (value) =>
-                      controller.totalExpensesText.value = value,
-                  decoration: _inputDecoration('Dépenses totales (optionnel)'),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: recommendationsController,
-                  onChanged: (value) =>
-                      controller.recommendations.value = value,
-                  decoration: _inputDecoration('Recommandations (optionnel)'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nextActionsController,
-                  onChanged: (value) => controller.nextActions.value = value,
-                  decoration: _inputDecoration(
-                    'Prochaines actions (optionnel)',
-                  ),
-                  maxLines: 3,
-                ),
-                Obx(() {
-                  final error = controller.formError.value;
-                  if (error == null) return const SizedBox(height: 16);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      error,
-                      style: const TextStyle(color: AppColors.error),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text(
-              'Annuler',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          Obx(() {
-            final saving = controller.isSaving.value;
-            return ElevatedButton(
-              onPressed: saving ? null : controller.submitForm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Enregistrer'),
-            );
-          }),
-        ],
       ),
     );
   }

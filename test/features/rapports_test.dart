@@ -9,6 +9,7 @@ import 'package:havena/core/references/reference_generator_service.dart';
 import 'package:havena/core/storage/file_storage_service.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/repositories/clients_repository.dart';
+import 'package:havena/features/finances/repositories/finances_repository.dart';
 import 'package:havena/features/inspections/repositories/inspection_items_repository.dart';
 import 'package:havena/features/inspections/repositories/inspections_repository.dart';
 import 'package:havena/features/interventions/repositories/interventions_repository.dart';
@@ -117,8 +118,9 @@ void main() {
   });
 
   test(
-      'autoFillFromRecords pré-remplit anomalies/interventions/dépenses/'
-      'état général à partir des enregistrements du mois', () async {
+      'generateReportsForSelectedMonth calcule anomalies/interventions/'
+      'état général et les dépenses du CLIENT (pas du prestataire) à '
+      'partir des enregistrements du mois', () async {
     final referenceGenerator = ReferenceGeneratorService(database);
     final prestatairesRepository =
         PrestatairesRepository(database.prestatairesDao, referenceGenerator);
@@ -137,6 +139,12 @@ void main() {
     );
     final inspectionItemsRepository =
         InspectionItemsRepository(database.inspectionItemsDao);
+    final financesRepository = FinancesRepository(
+      database.financesDao,
+      referenceGenerator,
+      clientsRepository,
+      prestatairesRepository,
+    );
 
     await clientsRepository.create(
       fullName: 'Client Rapport',
@@ -152,6 +160,14 @@ void main() {
         clientId: client.id, address: '15 rue Rapport', updatedBy: 'test-uid');
     final logement = (await logementsRepository.watchAll().first).first;
 
+    // Toujours le mois PRÉCÉDENT le jour du test (jamais le mois courant) :
+    // un rapport ne peut être généré que pour un mois déjà terminé.
+    final previousMonth =
+        DateTime(DateTime.now().year, DateTime.now().month - 1);
+    final period =
+        '${previousMonth.year}-${previousMonth.month.toString().padLeft(2, '0')}';
+    final eventDate = DateTime(previousMonth.year, previousMonth.month, 10);
+
     final interventionId = await interventionsRepository.create(
       logementId: logement.id,
       clientId: client.id,
@@ -161,7 +177,7 @@ void main() {
     );
     await interventionsRepository.updatePlanning(
       id: interventionId,
-      interventionDate: DateTime(2026, 9, 10),
+      interventionDate: eventDate,
       updatedBy: 'test-uid',
     );
     await interventionsRepository.updateAmounts(
@@ -173,7 +189,7 @@ void main() {
 
     final inspectionId = await inspectionsRepository.createWithChecklist(
       logementId: logement.id,
-      inspectionDate: DateTime(2026, 9, 5),
+      inspectionDate: eventDate,
       updatedBy: 'test-uid',
     );
     await inspectionsRepository.updateGeneralCondition(
@@ -201,6 +217,20 @@ void main() {
     );
     await inspectionsRepository.validate(id: inspectionId, updatedBy: 'test-uid');
 
+    // Paiement du CLIENT (ponctuel ou abonnement) enregistré dans Finances —
+    // c'est ce montant, pas le `prestataireAmount` versé au prestataire,
+    // qui doit apparaître comme « dépenses du client » dans le rapport.
+    await financesRepository.create(
+      transactionDate: eventDate,
+      transactionType: TransactionType.entree,
+      relatedClientId: client.id,
+      description: 'Paiement intervention',
+      amount: 80000,
+      status: TransactionStatus.valide,
+      periodMonth: period,
+      updatedBy: 'test-uid',
+    );
+
     final tempDir = await Directory.systemTemp.createTemp('havena_rapports_test_');
     addTearDown(() => tempDir.delete(recursive: true));
     final photosRepository = PhotosRepository(
@@ -217,18 +247,24 @@ void main() {
       inspectionsRepository,
       inspectionItemsRepository,
       photosRepository,
+      financesRepository,
     );
-    controller.logementId.value = logement.id;
-    controller.periodMonth.value = '2026-09';
+    controller.onInit();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    controller.selectedMonth.value = period;
 
-    await controller.autoFillFromRecords();
+    expect(controller.canGenerateForSelectedMonth, isTrue);
+    await controller.generateReportsForSelectedMonth();
 
-    expect(controller.inspectionDone.value, isTrue);
-    expect(controller.generalCondition.value, HousingCondition.moyen);
-    expect(controller.recommendations.value, 'Revoir la plomberie');
-    expect(controller.totalExpensesText.value, '50000');
-    expect(controller.interventionsDone.value, contains('Fuite cuisine'));
-    expect(controller.anomalies.value, contains('Fissure visible'));
+    final rapports = await rapportsRepository.watchAll().first;
+    final rapport = rapports.firstWhere((r) => r.logementId == logement.id);
+    expect(rapport.periodMonth, period);
+    expect(rapport.inspectionDone, isTrue);
+    expect(rapport.generalCondition, HousingCondition.moyen);
+    expect(rapport.recommendations, 'Revoir la plomberie');
+    expect(rapport.totalExpenses, 80000);
+    expect(rapport.interventionsDone, contains('Fuite cuisine'));
+    expect(rapport.anomalies, contains('Fissure visible'));
   });
 
   test('generate produit un PDF valide avec des photos jointes', () async {
