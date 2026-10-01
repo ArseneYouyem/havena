@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/clients/controllers/clients_controller.dart';
 import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
@@ -134,11 +135,13 @@ class ClientsContent extends GetView<ClientsController> {
                             onPressed: () =>
                                 _showFormDialog(context, client: client),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () => _confirmDelete(context, client),
-                          ),
+                          if (Get.find<SessionController>().isFondatrice)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              color: AppColors.error,
+                              onPressed: () =>
+                                  _confirmDelete(context, client),
+                            ),
                         ],
                       ),
                     ),

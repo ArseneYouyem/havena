@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
@@ -198,12 +199,13 @@ class InterventionsContent extends GetView<InterventionsController> {
                           const SizedBox(width: 4),
                           _buildStatusBadge(intervention.status),
                           const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () =>
-                                _confirmDelete(context, intervention),
-                          ),
+                          if (Get.find<SessionController>().isFondatrice)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              color: AppColors.error,
+                              onPressed: () =>
+                                  _confirmDelete(context, intervention),
+                            ),
                         ],
                       ),
                     ),
@@ -818,25 +820,26 @@ class InterventionsContent extends GetView<InterventionsController> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    right: 4,
-                    top: 4,
-                    child: GestureDetector(
-                      onTap: () => controller.deletePhoto(photo.id),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        child: const Icon(
-                          Icons.delete,
-                          color: Colors.white,
-                          size: 16,
+                  if (Get.find<SessionController>().isFondatrice)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: GestureDetector(
+                        onTap: () => controller.deletePhoto(photo.id),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               );
             }).toList(),

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/calendrier/controllers/calendrier_controller.dart';
 
 class CalendrierContent extends GetView<CalendrierController> {
@@ -352,11 +353,12 @@ class CalendrierContent extends GetView<CalendrierController> {
               color: AppColors.textSecondary,
               onPressed: () => _showFormDialog(context, event: event),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              color: AppColors.error,
-              onPressed: () => _confirmDelete(context, event),
-            ),
+            if (Get.find<SessionController>().isFondatrice)
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: AppColors.error,
+                onPressed: () => _confirmDelete(context, event),
+              ),
           ],
         ),
       ),

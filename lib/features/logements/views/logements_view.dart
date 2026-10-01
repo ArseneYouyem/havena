@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/inspections/views/inspections_view.dart';
 import 'package:havena/features/interventions/views/interventions_view.dart';
 import 'package:havena/features/logements/controllers/logements_controller.dart';
@@ -145,11 +146,13 @@ class LogementsContent extends GetView<LogementsController> {
                             onPressed: () =>
                                 _showFormDialog(context, logement: logement),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () => _confirmDelete(context, logement),
-                          ),
+                          if (Get.find<SessionController>().isFondatrice)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              color: AppColors.error,
+                              onPressed: () =>
+                                  _confirmDelete(context, logement),
+                            ),
                         ],
                       ),
                     ),

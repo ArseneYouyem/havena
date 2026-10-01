@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/prestataires/controllers/prestataires_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
@@ -174,12 +175,13 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                               prestataire: prestataire,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            color: AppColors.error,
-                            onPressed: () =>
-                                _confirmDelete(context, prestataire),
-                          ),
+                          if (Get.find<SessionController>().isFondatrice)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              color: AppColors.error,
+                              onPressed: () =>
+                                  _confirmDelete(context, prestataire),
+                            ),
                         ],
                       ),
                     ),
@@ -799,19 +801,21 @@ class _PrestataireDrawerContent extends GetView<PrestatairesController> {
                     label: const Text('Modifier'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        view._confirmDelete(context, prestataire),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
+                if (Get.find<SessionController>().isFondatrice) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          view._confirmDelete(context, prestataire),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                      ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Supprimer'),
                     ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Supprimer'),
                   ),
-                ),
+                ],
               ],
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
+import 'package:havena/features/auth/controllers/session_controller.dart';
 import 'package:havena/features/documents/controllers/documents_controller.dart';
 import 'package:havena/features/finances/controllers/finances_controller.dart';
 import 'package:havena/shared/widgets/copyable_reference.dart';
@@ -930,18 +931,20 @@ class _FinanceDrawerContent extends GetView<FinancesController> {
                   label: const Text('Modifier'),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => view._confirmDelete(context, finance),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
+              if (Get.find<SessionController>().isFondatrice) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => view._confirmDelete(context, finance),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Supprimer'),
                   ),
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Supprimer'),
                 ),
-              ),
+              ],
             ],
           ),
         ],
