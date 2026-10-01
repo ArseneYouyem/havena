@@ -54,6 +54,11 @@ class DashboardController extends GetxController {
   final depensesMensuelles = 0.0.obs;
   final montantPayePrestataires = 0.0.obs;
 
+  /// Mois affiché par la card finances (retour utilisateur : card dédiée
+  /// avec son propre sélecteur, présélectionnée sur le mois courant,
+  /// indépendante du reste du tableau de bord).
+  final selectedFinanceMonth = ''.obs;
+
   final margeMensuelle = 0.0.obs;
   final prestatairesActifs = 0.obs;
   final inspectionsRealisees = 0.obs;
@@ -75,6 +80,7 @@ class DashboardController extends GetxController {
 
   List<Abonnement> _lastAbonnements = [];
   List<Intervention> _lastInterventions = [];
+  List<Finance> _lastFinances = [];
 
   StreamSubscription? _clientsSub;
   StreamSubscription? _logementsSub;
@@ -87,6 +93,9 @@ class DashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    final now = DateTime.now();
+    selectedFinanceMonth.value =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}';
     _clientsSub = _clientsRepository.watchAll().listen((list) {
       clientsActifs.value =
           list.where((c) => c.status == ClientStatus.actif).length;
@@ -107,14 +116,7 @@ class DashboardController extends GetxController {
               i.urgencyLevel == UrgencyLevel.critique &&
               !_interventionTerminees.contains(i.status))
           .length;
-      final margeCeMois = list.where((i) {
-        final date = i.interventionDate;
-        final marge = i.havenaMargin;
-        if (date == null || marge == null) return false;
-        final now = DateTime.now();
-        return date.year == now.year && date.month == now.month;
-      }).fold<double>(0, (sum, i) => sum + i.havenaMargin!);
-      margeMensuelle.value = margeCeMois;
+      _recomputeFinanceKpis();
       final notes =
           list.map((i) => i.clientSatisfaction).whereType<int>().toList();
       satisfactionMoyenne.value = notes.isEmpty
@@ -142,24 +144,8 @@ class DashboardController extends GetxController {
       _recomputeAlerts();
     });
     _financesSub = _financesRepository.watchAll().listen((list) {
-      final now = DateTime.now();
-      final currentPeriod =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}';
-      final monthTransactions = list.where((f) =>
-          f.status != TransactionStatus.annule &&
-          f.periodMonth == currentPeriod);
-
-      chiffreAffairesMensuel.value = monthTransactions
-          .where((f) => f.transactionType == TransactionType.entree)
-          .fold<double>(0, (sum, f) => sum + f.amount);
-
-      final sorties =
-          monthTransactions.where((f) => f.transactionType == TransactionType.sortie);
-      depensesMensuelles.value =
-          sorties.fold<double>(0, (sum, f) => sum + f.amount);
-      montantPayePrestataires.value = sorties
-          .where((f) => f.relatedPrestataireId != null)
-          .fold<double>(0, (sum, f) => sum + f.amount);
+      _lastFinances = list;
+      _recomputeFinanceKpis();
     });
     _prestatairesSub = _prestatairesRepository.watchAll().listen((list) {
       prestatairesActifs.value =
@@ -175,6 +161,62 @@ class DashboardController extends GetxController {
       inspectionsAEffectuer.value =
           list.where((i) => !i.isValidated).length;
     });
+  }
+
+  void selectFinanceMonth(String month) {
+    selectedFinanceMonth.value = month;
+    _recomputeFinanceKpis();
+  }
+
+  void goToPreviousFinanceMonth() {
+    final parts = selectedFinanceMonth.value.split('-');
+    final current = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    final previous = DateTime(current.year, current.month - 1);
+    selectFinanceMonth(
+        '${previous.year}-${previous.month.toString().padLeft(2, '0')}');
+  }
+
+  void goToNextFinanceMonth() {
+    final parts = selectedFinanceMonth.value.split('-');
+    final current = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    final next = DateTime(current.year, current.month + 1);
+    selectFinanceMonth('${next.year}-${next.month.toString().padLeft(2, '0')}');
+  }
+
+  /// Recalcule les 4 indicateurs de la card finances (retour utilisateur :
+  /// card dédiée avec son propre sélecteur de mois) à partir du mois
+  /// sélectionné — appelé à chaque changement de mois ET à chaque mise à
+  /// jour des flux Finances/Interventions dont ces indicateurs dépendent.
+  void _recomputeFinanceKpis() {
+    final period = selectedFinanceMonth.value;
+    if (period.isEmpty) return;
+    final parts = period.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+
+    // Paiement CONFIRMÉ uniquement (retour utilisateur) : ni en attente, ni
+    // annulé.
+    final monthTransactions = _lastFinances.where((f) =>
+        f.status == TransactionStatus.valide && f.periodMonth == period);
+
+    chiffreAffairesMensuel.value = monthTransactions
+        .where((f) => f.transactionType == TransactionType.entree)
+        .fold<double>(0, (sum, f) => sum + f.amount);
+
+    final sorties = monthTransactions
+        .where((f) => f.transactionType == TransactionType.sortie);
+    depensesMensuelles.value =
+        sorties.fold<double>(0, (sum, f) => sum + f.amount);
+    montantPayePrestataires.value = sorties
+        .where((f) => f.relatedPrestataireId != null)
+        .fold<double>(0, (sum, f) => sum + f.amount);
+
+    margeMensuelle.value = _lastInterventions.where((i) {
+      final date = i.interventionDate;
+      final marge = i.havenaMargin;
+      if (date == null || marge == null) return false;
+      return date.year == year && date.month == month;
+    }).fold<double>(0, (sum, i) => sum + i.havenaMargin!);
   }
 
   /// Regroupe en alertes couleur (Rouge/Orange/Jaune, docs/temp.md — Rouge

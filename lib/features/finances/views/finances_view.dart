@@ -25,13 +25,23 @@ class FinancesContent extends GetView<FinancesController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PageHeader(
-            title: 'Finances',
-            subtitle: 'Gardez une vue claire sur vos entrées et dépenses.',
-            icon: Icons.account_balance_wallet_outlined,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: PageHeader(
+                  title: 'Finances',
+                  subtitle:
+                      'Gardez une vue claire sur vos entrées et dépenses.',
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+              ),
+              _buildMonthFilterButton(context),
+            ],
           ),
           const SizedBox(height: 16),
           Obx(() {
+            final monthSelected = controller.selectedMonth.value != null;
             return Row(
               children: [
                 _buildSummaryCard(
@@ -47,7 +57,10 @@ class FinancesContent extends GetView<FinancesController> {
                 ),
                 const SizedBox(width: 12),
                 _buildSummaryCard(
-                  'Solde',
+                  // « Solde » n'a de sens que cumulé depuis le début ; sur
+                  // un mois isolé, c'est une marge de la période (retour
+                  // utilisateur).
+                  monthSelected ? 'Marge' : 'Solde',
                   controller.solde,
                   controller.solde >= 0 ? AppColors.success : AppColors.error,
                 ),
@@ -159,6 +172,81 @@ class FinancesContent extends GetView<FinancesController> {
         ],
       ),
     );
+  }
+
+  static const _monthLabels = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+
+  String _monthLabel(String period) {
+    final parts = period.split('-');
+    final month = int.parse(parts[1]);
+    return '${_monthLabels[month - 1]} ${parts[0]}';
+  }
+
+  /// Bouton de filtre par mois (retour utilisateur) : à l'extrême droite de
+  /// la ligne de titre. « Tous les mois » par défaut, sinon limite les
+  /// cartes de synthèse ET la liste aux transactions du mois choisi.
+  Widget _buildMonthFilterButton(BuildContext context) {
+    return Obx(() {
+      final selected = controller.selectedMonth.value;
+      final months = controller.availableMonths();
+      return PopupMenuButton<String?>(
+        tooltip: 'Filtrer par mois',
+        onSelected: (value) => controller.selectedMonth.value = value,
+        itemBuilder: (context) => [
+          const PopupMenuItem<String?>(
+            value: null,
+            child: Text('Tous les mois'),
+          ),
+          ...months.map((month) {
+            return PopupMenuItem<String?>(
+              value: month,
+              child: Text(_monthLabel(month)),
+            );
+          }),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.calendar_month_outlined,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                selected == null ? 'Tous les mois' : _monthLabel(selected),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildFiltersRow(BuildContext context) {

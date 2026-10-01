@@ -38,6 +38,19 @@ class FinancesController extends GetxController {
   final Rxn<int> selectedFinanceId = Rxn<int>();
   void selectFinance(int? id) => selectedFinanceId.value = id;
 
+  /// Filtre par mois de la vue liste (retour utilisateur) : `null` = tous
+  /// les mois (par défaut). Quand un mois est choisi, les cartes de
+  /// synthèse ET la liste des transactions se limitent à ce mois.
+  final Rxn<String> selectedMonth = Rxn<String>();
+
+  /// Mois (format YYYY-MM) ayant au moins une transaction, triés du plus
+  /// récent au plus ancien — alimente le menu du filtre.
+  List<String> availableMonths() {
+    final months = finances.map((f) => f.periodMonth).toSet().toList();
+    months.sort((a, b) => b.compareTo(a));
+    return months;
+  }
+
   final editingId = Rxn<int>();
 
   final transactionDate = Rxn<DateTime>();
@@ -80,11 +93,23 @@ class FinancesController extends GetxController {
     super.onClose();
   }
 
-  double get totalEntrees => finances
+  /// Base des 3 cartes de synthèse : uniquement les transactions au
+  /// paiement CONFIRMÉ (retour utilisateur) — ni en attente, ni annulées —
+  /// limitées en plus au mois choisi si un filtre est actif.
+  List<Finance> get _financesForSummary {
+    var list = finances.where((f) => f.status == TransactionStatus.valide);
+    final month = selectedMonth.value;
+    if (month != null) {
+      list = list.where((f) => f.periodMonth == month);
+    }
+    return list.toList();
+  }
+
+  double get totalEntrees => _financesForSummary
       .where((f) => f.transactionType == TransactionType.entree)
       .fold(0.0, (sum, f) => sum + f.amount);
 
-  double get totalSorties => finances
+  double get totalSorties => _financesForSummary
       .where((f) => f.transactionType == TransactionType.sortie)
       .fold(0.0, (sum, f) => sum + f.amount);
 
@@ -92,6 +117,10 @@ class FinancesController extends GetxController {
 
   List<Finance> visibleFinances() {
     var list = finances.toList();
+    final month = selectedMonth.value;
+    if (month != null) {
+      list = list.where((f) => f.periodMonth == month).toList();
+    }
     final query = searchQuery.value.toLowerCase().trim();
     if (query.isNotEmpty) {
       list = list.where((finance) {

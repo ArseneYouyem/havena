@@ -232,8 +232,9 @@ void main() {
     expect(controller.satisfactionMoyenne.value, 4.0);
   });
 
-  test('chiffreAffairesMensuel ne compte que les entrées validées du mois en cours',
-      () async {
+  test(
+      'chiffreAffairesMensuel ne compte que les entrées au paiement '
+      'confirmé (ni en attente, ni annulées) du mois en cours', () async {
     final now = DateTime.now();
     final currentPeriod =
         '${now.year}-${now.month.toString().padLeft(2, '0')}';
@@ -262,6 +263,15 @@ void main() {
       description: 'Entrée annulée',
       amount: 15000,
       status: TransactionStatus.annule,
+      periodMonth: currentPeriod,
+      updatedBy: 'test-uid',
+    );
+    await financesRepository.create(
+      transactionDate: now,
+      transactionType: TransactionType.entree,
+      description: 'Entrée en attente de confirmation',
+      amount: 30000,
+      status: TransactionStatus.enAttente,
       periodMonth: currentPeriod,
       updatedBy: 'test-uid',
     );

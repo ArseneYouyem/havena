@@ -34,6 +34,10 @@ class DashboardContent extends GetView<DashboardController> {
   }
 
   Widget _buildDashboard(BuildContext context) {
+    // Rôle stable pendant la session : lu une seule fois, pas besoin d'un
+    // Obx dédié (retour utilisateur §7 — le coordinateur ne voit aucune
+    // card liée aux finances, y compris la card dédiée ci-dessous).
+    final isFondatrice = Get.find<SessionController>().isFondatrice;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -47,6 +51,10 @@ class DashboardContent extends GetView<DashboardController> {
           const SizedBox(height: 24),
           Obx(() => _AlertsSection(alerts: controller.alerts.toList())),
           const SizedBox(height: 8),
+          if (isFondatrice) ...[
+            const _FinanceKpiCard(),
+            const SizedBox(height: 16),
+          ],
           LayoutBuilder(builder: (context, constraints) {
             // Cartes de largeur responsive : au lieu d'une largeur fixe qui
             // laisse un grand espace vide à droite sur un écran large,
@@ -66,39 +74,8 @@ class DashboardContent extends GetView<DashboardController> {
             // callback Obx pour être suivies par GetX — les faire ici,
             // avant le retour de l'Obx, ne déclencherait jamais de mise à
             // jour réactive (piège déjà rencontré sur `_AlertsSection`).
-            // Rôle stable pendant la session : lu une seule fois, pas
-            // besoin d'un Obx dédié (retour utilisateur §7 — le
-            // coordinateur ne voit aucune card liée aux finances).
-            final isFondatrice = Get.find<SessionController>().isFondatrice;
-
             return Obx(() {
               final cards = <Widget>[
-              if (isFondatrice) ...[
-                _IndicatorCard(
-                  label: 'Chiffre d\'affaires (mois)',
-                  value:
-                      _formatAmount(controller.chiffreAffairesMensuel.value),
-                  icon: Icons.payments_outlined,
-                ),
-                _IndicatorCard(
-                  label: 'Dépenses (mois)',
-                  value: _formatAmount(controller.depensesMensuelles.value),
-                  icon: Icons.trending_down,
-                  accentColor: AppColors.secondary,
-                ),
-                _IndicatorCard(
-                  label: 'Payé aux prestataires (mois)',
-                  value: _formatAmount(
-                      controller.montantPayePrestataires.value),
-                  icon: Icons.handshake_outlined,
-                  accentColor: AppColors.secondary,
-                ),
-                _IndicatorCard(
-                  label: 'Marge HAVENA (mois)',
-                  value: _formatAmount(controller.margeMensuelle.value),
-                  icon: Icons.trending_up,
-                ),
-              ],
               _IndicatorCard(
                 label: 'Clients actifs',
                 value: controller.clientsActifs.value.toString(),
@@ -191,6 +168,137 @@ class DashboardContent extends GetView<DashboardController> {
           const SizedBox(height: 24),
           _ProcedureCard(onTap: controller.openProcedure),
         ],
+      ),
+    );
+  }
+}
+
+/// Card dédiée aux 4 indicateurs financiers (retour utilisateur : « une
+/// première ligne concernant les 4 KPI de finances dans un card, avec un
+/// bouton pour sélectionner le mois ») — seule la Fondatrice la voit
+/// (filtré par l'appelant), présélectionnée sur le mois courant.
+class _FinanceKpiCard extends GetView<DashboardController> {
+  const _FinanceKpiCard();
+
+  static const _monthLabels = [
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
+
+  String _monthLabel(String period) {
+    final parts = period.split('-');
+    return '${_monthLabels[int.parse(parts[1]) - 1]} ${parts[0]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Obx(() {
+              return Row(
+                children: [
+                  const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 18,
+                    color: AppColors.secondaryText,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Finances',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    color: AppColors.textPrimary,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: controller.goToPreviousFinanceMonth,
+                  ),
+                  Text(
+                    _monthLabel(controller.selectedFinanceMonth.value),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    color: AppColors.textPrimary,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: controller.goToNextFinanceMonth,
+                  ),
+                ],
+              );
+            }),
+            const SizedBox(height: 12),
+            Obx(() {
+              return Row(
+                children: [
+                  Expanded(
+                    child: _IndicatorCard(
+                      label: 'Chiffre d\'affaires',
+                      value: _formatAmount(
+                          controller.chiffreAffairesMensuel.value),
+                      icon: Icons.payments_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _IndicatorCard(
+                      label: 'Dépenses',
+                      value:
+                          _formatAmount(controller.depensesMensuelles.value),
+                      icon: Icons.trending_down,
+                      accentColor: AppColors.secondary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _IndicatorCard(
+                      label: 'Payé aux prestataires',
+                      value: _formatAmount(
+                          controller.montantPayePrestataires.value),
+                      icon: Icons.handshake_outlined,
+                      accentColor: AppColors.secondary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _IndicatorCard(
+                      label: 'Marge HAVENA',
+                      value: _formatAmount(controller.margeMensuelle.value),
+                      icon: Icons.trending_up,
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
