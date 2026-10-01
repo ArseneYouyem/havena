@@ -158,6 +158,24 @@ class FinancesController extends GetxController {
     return '';
   }
 
+  /// Nom et référence séparés (retour utilisateur : la référence doit
+  /// porter sa propre icône de copie, indépendamment du nom).
+  String? clientNameFor(int? clientId) {
+    if (clientId == null) return null;
+    for (final client in clients) {
+      if (client.id == clientId) return client.fullName;
+    }
+    return null;
+  }
+
+  String? clientReferenceFor(int? clientId) {
+    if (clientId == null) return null;
+    for (final client in clients) {
+      if (client.id == clientId) return client.reference;
+    }
+    return null;
+  }
+
   String prestataireLabelFor(int? prestataireId) {
     if (prestataireId == null) return '';
     for (final prestataire in prestataires) {
@@ -166,6 +184,22 @@ class FinancesController extends GetxController {
       }
     }
     return '';
+  }
+
+  String? prestataireNameFor(int? prestataireId) {
+    if (prestataireId == null) return null;
+    for (final prestataire in prestataires) {
+      if (prestataire.id == prestataireId) return prestataire.fullName;
+    }
+    return null;
+  }
+
+  String? prestataireReferenceFor(int? prestataireId) {
+    if (prestataireId == null) return null;
+    for (final prestataire in prestataires) {
+      if (prestataire.id == prestataireId) return prestataire.reference;
+    }
+    return null;
   }
 
   void openCreateForm() {

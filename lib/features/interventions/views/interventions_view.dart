@@ -8,6 +8,7 @@ import 'package:havena/app/theme/app_colors.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/interventions/controllers/interventions_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InterventionsContent extends GetView<InterventionsController> {
@@ -21,13 +22,65 @@ class InterventionsContent extends GetView<InterventionsController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final selectedId = controller.selectedInterventionId.value;
-      if (selectedId == null) {
-        return _buildListView(context);
-      }
-      return _buildDetailView(context);
-    });
+    if (onBack != null) {
+      // Intégré dans le drawer d'un autre module (ex. Logements) : va
+      // directement au détail, sans liste ni second drawer imbriqué.
+      return Obx(() {
+        final selectedId = controller.selectedInterventionId.value;
+        if (selectedId == null) {
+          return _buildListView(context);
+        }
+        return _buildDetailView(context);
+      });
+    }
+    // Onglet Interventions natif (retour utilisateur : même mode drawer que
+    // depuis le détail Logement) : la liste reste visible, le détail
+    // glisse depuis la droite dans son propre drawer.
+    return Stack(
+      children: [
+        _buildListView(context),
+        _buildOwnDrawer(context),
+      ],
+    );
+  }
+
+  Widget _buildOwnDrawer(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final isOpen = controller.selectedInterventionId.value != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectIntervention(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: isOpen
+                      ? _buildDetailView(context)
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -109,7 +162,7 @@ class InterventionsContent extends GetView<InterventionsController> {
                           color: AppColors.primary,
                         ),
                       ),
-                      title: Text(
+                      title: CopyableReference(
                         intervention.reference,
                         style: const TextStyle(color: AppColors.textPrimary),
                       ),
@@ -284,8 +337,9 @@ class InterventionsContent extends GetView<InterventionsController> {
                       onBack ?? () => controller.selectIntervention(null),
                 ),
                 const SizedBox(width: 8),
-                Text(
+                CopyableReference(
                   intervention.reference,
+                  iconSize: 18,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
@@ -387,9 +441,29 @@ class InterventionsContent extends GetView<InterventionsController> {
           style: const TextStyle(color: AppColors.textPrimary),
         ),
         const SizedBox(height: 4),
-        Text(
-          'Inspection liée : ${controller.inspectionLabelFor(intervention.inspectionId)}',
-          style: const TextStyle(color: AppColors.textPrimary),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            const Text(
+              'Inspection liée : ',
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
+            if (controller
+                    .inspectionReferenceFor(intervention.inspectionId) !=
+                null) ...[
+              CopyableReference(
+                controller
+                    .inspectionReferenceFor(intervention.inspectionId)!,
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+              const Text(' — ',
+                  style: TextStyle(color: AppColors.textPrimary)),
+            ],
+            Text(
+              controller.inspectionDateLabelFor(intervention.inspectionId),
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         _InterventionTextField(

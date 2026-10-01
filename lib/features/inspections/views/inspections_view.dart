@@ -9,6 +9,7 @@ import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/core/inspections/inspection_checklist.dart';
 import 'package:havena/features/inspections/controllers/inspections_controller.dart';
+import 'package:havena/shared/widgets/copyable_reference.dart';
 import 'package:havena/shared/widgets/photo_preview_dialog.dart';
 
 class InspectionsContent extends GetView<InspectionsController> {
@@ -22,13 +23,65 @@ class InspectionsContent extends GetView<InspectionsController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      final selectedId = controller.selectedInspectionId.value;
-      if (selectedId == null) {
-        return _buildListView(context);
-      }
-      return _buildDetailView(context);
-    });
+    if (onBack != null) {
+      // Intégré dans le drawer d'un autre module (ex. Logements) : va
+      // directement au détail, sans liste ni second drawer imbriqué.
+      return Obx(() {
+        final selectedId = controller.selectedInspectionId.value;
+        if (selectedId == null) {
+          return _buildListView(context);
+        }
+        return _buildDetailView(context);
+      });
+    }
+    // Onglet Inspections natif (retour utilisateur : même mode drawer que
+    // depuis le détail Logement) : la liste reste visible, le détail
+    // glisse depuis la droite dans son propre drawer.
+    return Stack(
+      children: [
+        _buildListView(context),
+        _buildOwnDrawer(context),
+      ],
+    );
+  }
+
+  Widget _buildOwnDrawer(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final isOpen = controller.selectedInspectionId.value != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectInspection(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: isOpen
+                      ? _buildDetailView(context)
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -109,7 +162,7 @@ class InspectionsContent extends GetView<InspectionsController> {
                           color: AppColors.primary,
                         ),
                       ),
-                      title: Text(
+                      title: CopyableReference(
                         inspection.reference,
                         style: const TextStyle(color: AppColors.textPrimary),
                       ),
@@ -231,8 +284,9 @@ class InspectionsContent extends GetView<InspectionsController> {
                   onPressed: onBack ?? () => controller.selectInspection(null),
                 ),
                 const SizedBox(width: 8),
-                Text(
+                CopyableReference(
                   inspection.reference,
+                  iconSize: 18,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
