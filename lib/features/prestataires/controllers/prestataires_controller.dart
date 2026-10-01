@@ -3,16 +3,72 @@ import 'package:get/get.dart';
 import 'package:havena/core/database/app_database.dart';
 import 'package:havena/core/database/enums.dart';
 import 'package:havena/features/auth/controllers/session_controller.dart';
+import 'package:havena/features/interventions/repositories/interventions_repository.dart';
 import 'package:havena/features/prestataires/repositories/prestataires_repository.dart';
 
 class PrestatairesController extends GetxController {
-  PrestatairesController(this._repository, this._sessionController);
+  PrestatairesController(
+    this._repository,
+    this._sessionController,
+    this._interventionsRepository,
+  );
 
   final PrestatairesRepository _repository;
   final SessionController _sessionController;
+  final InterventionsRepository _interventionsRepository;
 
   final prestataires = <Prestataire>[].obs;
+  final _interventions = <Intervention>[].obs;
   final searchQuery = ''.obs;
+
+  /// Drawer latéral (retour utilisateur) : détails du prestataire cliqué,
+  /// y compris son nombre d'interventions effectuées — même principe que
+  /// les drawers Clients/Finances/Abonnements.
+  final Rxn<int> selectedPrestataireId = Rxn<int>();
+  void selectPrestataire(int? id) => selectedPrestataireId.value = id;
+
+  static const _interventionTerminees = {
+    InterventionStatus.termine,
+    InterventionStatus.paye,
+    InterventionStatus.archive,
+  };
+
+  List<Intervention> interventionsForPrestataire(int prestataireId) {
+    return _interventions.where((i) => i.prestataireId == prestataireId).toList();
+  }
+
+  int completedInterventionsCountFor(int prestataireId) {
+    return interventionsForPrestataire(prestataireId)
+        .where((i) => _interventionTerminees.contains(i.status))
+        .length;
+  }
+
+  /// Note de satisfaction client (retour utilisateur) : désormais calculée
+  /// — jamais saisie à la main — à partir de l'historique des notes de
+  /// satisfaction (`Intervention.clientSatisfaction`) des interventions
+  /// confiées à ce prestataire.
+  double? satisfactionRatingFor(int prestataireId) {
+    final notes = interventionsForPrestataire(prestataireId)
+        .map((i) => i.clientSatisfaction)
+        .whereType<int>()
+        .toList();
+    if (notes.isEmpty) return null;
+    return notes.reduce((a, b) => a + b) / notes.length;
+  }
+
+  /// Note finale affichée (retour utilisateur) : combinaison des 4 notes
+  /// (qualité, ponctualité, communication, satisfaction client) — moyenne
+  /// de celles renseignées, `null` si aucune ne l'est.
+  double? finalRatingFor(Prestataire prestataire) {
+    final ratings = [
+      prestataire.qualityRating,
+      prestataire.punctualityRating,
+      prestataire.communicationRating,
+      satisfactionRatingFor(prestataire.id),
+    ].whereType<double>().toList();
+    if (ratings.isEmpty) return null;
+    return ratings.reduce((a, b) => a + b) / ratings.length;
+  }
 
   final editingId = Rxn<int>();
 
@@ -34,6 +90,7 @@ class PrestatairesController extends GetxController {
   final formError = Rxn<String>();
 
   StreamSubscription<List<Prestataire>>? _prestatairesSub;
+  StreamSubscription<List<Intervention>>? _interventionsSub;
 
   @override
   void onInit() {
@@ -41,11 +98,15 @@ class PrestatairesController extends GetxController {
     _prestatairesSub = _repository.watchAll().listen((data) {
       prestataires.value = data;
     });
+    _interventionsSub = _interventionsRepository.watchAll().listen((data) {
+      _interventions.value = data;
+    });
   }
 
   @override
   void onClose() {
     _prestatairesSub?.cancel();
+    _interventionsSub?.cancel();
     super.onClose();
   }
 

@@ -11,6 +11,15 @@ class PrestatairesContent extends GetView<PrestatairesController> {
 
   @override
   Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        _buildListView(context),
+        const _PrestataireDrawer(),
+      ],
+    );
+  }
+
+  Widget _buildListView(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -73,6 +82,8 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                     color: AppColors.surface,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
+                      onTap: () =>
+                          controller.selectPrestataire(prestataire.id),
                       leading: CircleAvatar(
                         backgroundColor: AppColors.primary.withValues(
                           alpha: 0.1,
@@ -118,22 +129,38 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (prestataire.qualityRating != null) ...[
-                            const Icon(
-                              Icons.star,
-                              color: AppColors.warning,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              prestataire.qualityRating!.toStringAsFixed(1),
-                              style: const TextStyle(
-                                color: AppColors.warning,
-                                fontSize: 12,
+                          Builder(builder: (context) {
+                            // Note finale = combinaison des 4 notes
+                            // (qualité, ponctualité, communication,
+                            // satisfaction client calculée) — retour
+                            // utilisateur.
+                            final rating =
+                                controller.finalRatingFor(prestataire);
+                            if (rating == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.star,
+                                    color: AppColors.warning,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      color: AppColors.warning,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
+                            );
+                          }),
                           _buildStatusBadge(prestataire.status),
                           const SizedBox(width: 8),
                           IconButton(
@@ -358,6 +385,8 @@ class PrestatairesContent extends GetView<PrestatairesController> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                _buildSatisfactionField(prestataire),
+                const SizedBox(height: 16),
                 Obx(() {
                   return DropdownButtonFormField<PrestataireStatus>(
                     initialValue: controller.status.value,
@@ -431,6 +460,41 @@ class PrestatairesContent extends GetView<PrestatairesController> {
     );
   }
 
+  /// Note de satisfaction client (retour utilisateur) : calculée à partir
+  /// de l'historique des interventions, jamais saisie à la main — champ en
+  /// lecture seule.
+  Widget _buildSatisfactionField(Prestataire? prestataire) {
+    final rating = prestataire == null
+        ? null
+        : Get.find<PrestatairesController>()
+            .satisfactionRatingFor(prestataire.id);
+    return InputDecorator(
+      decoration: _inputDecoration('Satisfaction client (calculée)'),
+      child: Row(
+        children: [
+          Icon(
+            Icons.star,
+            size: 18,
+            color: rating == null
+                ? AppColors.textSecondary
+                : AppColors.warning,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            rating == null
+                ? 'Aucune donnée pour l\'instant'
+                : '${rating.toStringAsFixed(1)} / 5',
+            style: TextStyle(
+              color: rating == null
+                  ? AppColors.textSecondary
+                  : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   InputDecoration _inputDecoration(String label, {Widget? prefixIcon}) {
     return InputDecoration(
       labelText: label,
@@ -481,6 +545,318 @@ class PrestatairesContent extends GetView<PrestatairesController> {
               foregroundColor: Colors.white,
             ),
             child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Drawer qui glisse depuis la droite et s'arrête à mi-largeur de l'onglet
+/// Prestataires, pour afficher les détails complets du prestataire cliqué
+/// — y compris son nombre d'interventions effectuées (retour utilisateur).
+class _PrestataireDrawer extends StatelessWidget {
+  const _PrestataireDrawer();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<PrestatairesController>();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth / 2;
+        return Obx(() {
+          final id = controller.selectedPrestataireId.value;
+          Prestataire? prestataire;
+          if (id != null) {
+            for (final p in controller.prestataires) {
+              if (p.id == id) {
+                prestataire = p;
+                break;
+              }
+            }
+          }
+          final isOpen = prestataire != null;
+          return Stack(
+            children: [
+              if (isOpen)
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => controller.selectPrestataire(null),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                    ),
+                  ),
+                ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                top: 0,
+                bottom: 0,
+                right: isOpen ? 0 : -width,
+                width: width,
+                child: Material(
+                  elevation: 8,
+                  color: AppColors.background,
+                  child: prestataire == null
+                      ? const SizedBox.shrink()
+                      : _PrestataireDrawerContent(
+                          prestataire: prestataire,
+                          onClose: () => controller.selectPrestataire(null),
+                        ),
+                ),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+}
+
+class _PrestataireDrawerContent extends GetView<PrestatairesController> {
+  const _PrestataireDrawerContent({
+    required this.prestataire,
+    required this.onClose,
+  });
+
+  final Prestataire prestataire;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    const view = PrestatairesContent();
+    return Obx(() {
+      // Lecture explicite pour que ce drawer se recalcule quand les
+      // interventions changent (nombre effectué, satisfaction calculée).
+      final interventionsCount =
+          controller.completedInterventionsCountFor(prestataire.id);
+      final satisfaction = controller.satisfactionRatingFor(prestataire.id);
+      final rating = controller.finalRatingFor(prestataire);
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  color: AppColors.textPrimary,
+                  onPressed: onClose,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    prestataire.fullName,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                view._buildStatusBadge(prestataire.status),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Card(
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow(Icons.badge_outlined, prestataire.reference),
+                    _buildInfoRow(Icons.phone_outlined, prestataire.phone),
+                    _buildInfoRow(
+                        Icons.engineering_outlined, prestataire.specialty),
+                    if (prestataire.zone != null)
+                      _buildInfoRow(
+                          Icons.location_on_outlined, prestataire.zone!),
+                    if (prestataire.experienceYears != null)
+                      _buildInfoRow(
+                        Icons.timeline_outlined,
+                        '${prestataire.experienceYears} an(s) d\'expérience',
+                      ),
+                    if (prestataire.indicativeRate != null)
+                      _buildInfoRow(
+                        Icons.payments_outlined,
+                        '${prestataire.indicativeRate!.toStringAsFixed(0)} FCFA (tarif indicatif)',
+                      ),
+                    _buildInfoRow(
+                      Icons.task_alt_outlined,
+                      '$interventionsCount intervention(s) effectuée(s)',
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          prestataire.identityVerified
+                              ? Icons.verified_outlined
+                              : Icons.remove_circle_outline,
+                          size: 16,
+                          color: prestataire.identityVerified
+                              ? AppColors.success
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Identité vérifiée',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          prestataire.referencesVerified
+                              ? Icons.verified_outlined
+                              : Icons.remove_circle_outline,
+                          size: 16,
+                          color: prestataire.referencesVerified
+                              ? AppColors.success
+                              : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Références vérifiées',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (prestataire.observations != null &&
+                        prestataire.observations!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _buildInfoRow(
+                          Icons.notes_outlined, prestataire.observations!),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Notes',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildRatingRow('Qualité', prestataire.qualityRating),
+                    _buildRatingRow(
+                        'Ponctualité', prestataire.punctualityRating),
+                    _buildRatingRow(
+                        'Communication', prestataire.communicationRating),
+                    _buildRatingRow(
+                        'Satisfaction client (calculée)', satisfaction),
+                    const Divider(height: 20, color: AppColors.border),
+                    _buildRatingRow('Note finale', rating, emphasis: true),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      onClose();
+                      view._showFormDialog(context, prestataire: prestataire);
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        view._confirmDelete(context, prestataire),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Supprimer'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildInfoRow(IconData icon, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRatingRow(String label, double? value, {bool emphasis = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: emphasis ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.star,
+            size: 16,
+            color: value == null ? AppColors.textSecondary : AppColors.warning,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value == null ? 'N/A' : value.toStringAsFixed(1),
+            style: TextStyle(
+              color:
+                  value == null ? AppColors.textSecondary : AppColors.textPrimary,
+              fontWeight: emphasis ? FontWeight.w700 : FontWeight.normal,
+            ),
           ),
         ],
       ),
