@@ -1,0 +1,19 @@
+HAVENA - Version de test Windows x64
+
+1. Extraire TOUT le ZIP dans un dossier local.
+2. Ouvrir ce dossier puis lancer havena.exe.
+3. Se connecter avec le compte fourni par l'administratrice.
+
+Conserver les DLL et le dossier data a cote de havena.exe.
+Ne pas lancer le programme directement depuis le ZIP.
+Flutter et Visual Studio ne sont pas necessaires sur le PC de test.
+
+Si Windows indique une DLL VCRUNTIME ou MSVCP manquante, installer
+Microsoft Visual C++ Redistributable x64, puis relancer HAVENA :
+https://aka.ms/vs/17/release/vc_redist.x64.exe
+
+Cette version de test n'est pas signee. Windows peut afficher un avertissement
+sur son editeur. Verifier la provenance du ZIP aupres de l'expediteur.
+
+Pour signaler un probleme, joindre le fichier BUILD.txt, la version de Windows,
+les etapes permettant de reproduire le probleme et une capture si possible.

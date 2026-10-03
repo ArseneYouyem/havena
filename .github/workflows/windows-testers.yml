@@ -1,0 +1,79 @@
+name: Windows - Testeurs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Recuperer le projet
+        uses: actions/checkout@v6
+
+      - name: Installer Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+          cache: true
+
+      - name: Restaurer la configuration Google Drive
+        env:
+          DRIVE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_DRIVE_CREDENTIALS_JSON }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DRIVE_CREDENTIALS_JSON)) {
+            throw 'Ajoutez le secret GOOGLE_DRIVE_CREDENTIALS_JSON dans les parametres du depot.'
+          }
+          try {
+            $credentials = $env:DRIVE_CREDENTIALS_JSON | ConvertFrom-Json -ErrorAction Stop
+          } catch {
+            throw 'Le secret GOOGLE_DRIVE_CREDENTIALS_JSON doit contenir un JSON valide.'
+          }
+          if (!$credentials.installed.client_id -or !$credentials.installed.client_secret) {
+            throw 'Le JSON doit contenir installed.client_id et installed.client_secret (OAuth Desktop).'
+          }
+          [System.IO.File]::WriteAllText(
+            "$env:GITHUB_WORKSPACE/google_drive_credentials.json",
+            $env:DRIVE_CREDENTIALS_JSON,
+            [System.Text.UTF8Encoding]::new($false))
+
+      - name: Installer les dependances
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyser le code
+        run: flutter analyze
+
+      - name: Executer les tests
+        run: flutter test
+
+      - name: Compiler Windows x64
+        run: flutter build windows --release --build-number=${{ github.run_number }}
+
+      - name: Preparer les instructions pour les testeurs
+        run: |
+          $releaseDir = 'build/windows/x64/runner/Release'
+          if (!(Test-Path "$releaseDir/havena.exe")) {
+            throw 'Executable havena.exe introuvable.'
+          }
+          Copy-Item docs/TESTEURS_WINDOWS.txt "$releaseDir/LIRE-MOI.txt"
+          "Build GitHub : $env:GITHUB_RUN_NUMBER`nCommit : $env:GITHUB_SHA" |
+            Set-Content "$releaseDir/BUILD.txt" -Encoding utf8
+
+      - name: Publier le ZIP telechargeable
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAVENA-Windows-x64-${{ github.run_number }}
+          path: build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Nettoyer le fichier de configuration temporaire
+        if: always()
+        run: Remove-Item google_drive_credentials.json -ErrorAction SilentlyContinue
